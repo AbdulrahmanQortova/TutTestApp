@@ -1,5 +1,108 @@
-bin/
-obj/
-/packages/
-riderModule.iml
-/_ReSharper.Caches/
+# Solution-level .gitignore for Tut_Mono
+# Covers common Visual Studio/.NET, MAUI/Xamarin, Rider, VS Code, macOS/Windows, Node, and Docker artifacts
+# Based on: https://github.com/github/gitignore/tree/main
+
+# Build directories
+**/bin/
+**/obj/
+**/publish/
+
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Rider / JetBrains
+.idea/
+*.sln.iml
+*.iws
+*.iml
+
+# Visual Studio Code
+.vscode/
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+project.lock.json
+project.assets.json
+
+# Dotnet tools
+.tools/
+
+# Logs
+*.log
+logs/
+TestResults/
+*.trx
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.userprefs
+
+# Resharper
+_ReSharper*/
+*.ReSharper
+*.DotSettings.user
+
+# Rider caches (repeated to ensure coverage)
+.idea/
+
+# Coverage and profiling
+*.coverage
+*.coveragexml
+coverage.opencover.xml
+coverage*.xml
+*.dotCover
+
+# Xamarin / MAUI / mobile
+*.apk
+*.ap_
+*.aab
+*.ipa
+*.app
+*.xcuserstate
+*.xcuserdata/
+*.xcodeproj/project.xcworkspace/
+
+# Native outputs
+*.so
+*.dylib
+*.dll
+
+# Signing and secrets
+*.pfx
+*.key
+local.settings.json
+
+# Node
+node_modules/
+
+# Composer
+vendor/
+
+# Docker
+docker-compose.override.yml
+.docker/
+
+# Ignore IDE and build artefacts from platforms directories
+Platforms/**/bin/
+Platforms/**/obj/
+
+# Misc
+*.log
+*.tmp
+*.temp
+
+# Keep project files (appsettings/*.json) in source control — don't ignore global appsettings
+# End of file
+
