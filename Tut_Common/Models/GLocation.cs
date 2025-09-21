@@ -4,6 +4,7 @@ namespace Tut.Common.Models;
 [ProtoContract]
 public class GLocation
 {
+    public int Id { get; set; }
     [ProtoMember(1)]
     public double Latitude { get; set; }
     [ProtoMember(2)]

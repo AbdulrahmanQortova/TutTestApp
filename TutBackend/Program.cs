@@ -1,4 +1,7 @@
+using Tut.Common.GServices;
 using TutBackend.Data;
+using TutBackend.Repositories;
+using TutBackend.Services;
 namespace TutBackend;
 
 public static class Program
@@ -15,11 +18,22 @@ public static class Program
         
         builder.Services.AddGrpc();
         builder.Services.AddDbContext<TutDbContext>();
+
+        // Register repositories
+        builder.Services.AddScoped<IUserRepository, UserRepository>();
+        builder.Services.AddScoped<IDriverRepository, DriverRepository>();
+        builder.Services.AddScoped<ILocationRepository, LocationRepository>();
+        builder.Services.AddScoped<ITripRepository, TripRepository>();
+        builder.Services.AddScoped<ISavedPlaceRepository, SavedPlaceRepository>();
+        builder.Services.AddScoped<IMessageRepository, MessageRepository>();
+        builder.Services.AddScoped<IStopRepository, StopRepository>();
+        builder.Services.AddScoped<IDriverLocationRepository, DriverLocationRepository>();
+
         var app = builder.Build();
 
 // Configure the HTTP request pipeline.
         app.MapGet("/", () => "Communication with gRPC endpoints must be made through a gRPC client. To learn how to create a client, visit: https://go.microsoft.com/fwlink/?linkid=2086909");
-
+        app.MapGrpcService<GDriverManagerService>();
         app.Run();
     }
 }
