@@ -6,14 +6,22 @@ namespace TutBackend.Data;
 
 public class TutDbContext : DbContext
 {
+    // Added constructor to allow passing DbContextOptions (e.g. InMemory for tests)
+    public TutDbContext(DbContextOptions<TutDbContext> options) : base(options)
+    {
+    }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        string connectionString = Program.ConnectionString;
-        Console.WriteLine(connectionString);
-        optionsBuilder.UseSqlServer(connectionString)
-            .EnableSensitiveDataLogging()
-            .EnableDetailedErrors();
+        // Only configure SQL Server when no options have been provided (e.g. in production)
+        if (!optionsBuilder.IsConfigured)
+        {
+            string connectionString = Program.ConnectionString;
+            Console.WriteLine(connectionString);
+            optionsBuilder.UseSqlServer(connectionString)
+                .EnableSensitiveDataLogging()
+                .EnableDetailedErrors();
+        }
     }
     
     public DbSet<User> Users { get; set; }
