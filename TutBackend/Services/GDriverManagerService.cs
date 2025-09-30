@@ -5,7 +5,7 @@ using Tut.Common.Utils;
 using TutBackend.Repositories;
 namespace TutBackend.Services;
 
-public class GDriverManagerService(IDriverRepository driverRepository, ILogger<GDriverManagerService> logger) : IGDriverManagerService
+public class GDriverManagerService(IDriverRepository driverRepository, QipClient qipClient, ILogger<GDriverManagerService> logger) : IGDriverManagerService
 {
 
     public async Task<GIdResponse> AddDriver(Driver driver)

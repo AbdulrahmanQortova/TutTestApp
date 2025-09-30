@@ -1,3 +1,4 @@
+using ProtoBuf.Grpc.Server;
 using Tut.Common.GServices;
 using TutBackend.Data;
 using TutBackend.Repositories;
@@ -15,8 +16,10 @@ public static class Program
         ConnectionString = connectionString;
 
         
-        
-        builder.Services.AddGrpc();
+        builder.Services.AddCodeFirstGrpc(config =>
+        {
+            config.ResponseCompressionLevel = System.IO.Compression.CompressionLevel.Optimal;
+        });
         builder.Services.AddDbContext<TutDbContext>();
 
         // Register repositories
@@ -28,6 +31,8 @@ public static class Program
         builder.Services.AddScoped<IMessageRepository, MessageRepository>();
         builder.Services.AddScoped<IStopRepository, StopRepository>();
         builder.Services.AddScoped<IDriverLocationRepository, DriverLocationRepository>();
+        builder.Services.AddScoped<QipClient>();
+        builder.Services.AddHttpClient();
 
         var app = builder.Build();
 

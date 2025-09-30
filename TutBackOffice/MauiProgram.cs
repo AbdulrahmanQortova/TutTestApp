@@ -1,4 +1,7 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using CommunityToolkit.Maui;
+using Microsoft.Extensions.Logging;
+using SkiaSharp.Views.Maui.Controls.Hosting;
+using System.Diagnostics;
 
 namespace TutBackOffice;
 
@@ -9,6 +12,8 @@ public static class MauiProgram
         var builder = MauiApp.CreateBuilder();
         builder
             .UseMauiApp<App>()
+            .UseMauiCommunityToolkit()
+            .UseSkiaSharp()
             .ConfigureFonts(fonts =>
             {
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
@@ -17,6 +22,14 @@ public static class MauiProgram
 
 #if DEBUG
         builder.Logging.AddDebug();
+        
+        Mapsui.Logging.Logger.LogDelegate += (level, msg, ex) =>
+        {
+            Debug.WriteLine($"[Maps] {level}: {msg}");
+            if(ex != null)
+                Debug.WriteLine(ex.Message);
+        };
+
 #endif
 
         return builder.Build();
