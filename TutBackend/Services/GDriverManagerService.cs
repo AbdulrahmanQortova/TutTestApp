@@ -10,19 +10,26 @@ public class GDriverManagerService(IDriverRepository driverRepository, QipClient
 
     public async Task<GIdResponse> AddDriver(Driver driver)
     {
-        logger.LogInformation("Adding driver: {DriverFirstName} {DriverLastName}", driver.FirstName, driver.LastName);
+        logger.LogInformation("Adding driver: {DriverFullName}", driver.FullName);
         logger.LogDebug("{Driver}", driver.ToJson());
         GIdResponse response = new ();
 
         try
         {
+            HttpResponseMessage resp = await qipClient.RegisterAsync(new RegisterRequest
+            {
+                Username = driver.Mobile,
+                Password = driver.Password,
+                Role = "Driver"
+            });
+            resp.EnsureSuccessStatusCode();
             await driverRepository.AddAsync(driver);
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "Error adding driver");
             throw new RpcException(new Status(StatusCode.Internal, $"Error adding driver", ex));
         }
-        
         logger.LogDebug("{Response}", response.ToJson());
         return response;
     }

@@ -31,7 +31,6 @@ public class User
     [ProtoMember(12)]
     public List<Trip>? Trips { get; set; }
 
-    public int QipUserId { get; set; }
 }
 
 public enum UserState

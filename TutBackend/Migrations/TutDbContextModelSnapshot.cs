@@ -57,9 +57,6 @@ namespace TutBackend.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("QipUserId")
-                        .HasColumnType("int");
-
                     b.Property<double>("Rating")
                         .HasColumnType("float");
 
@@ -335,9 +332,6 @@ namespace TutBackend.Migrations
                     b.Property<string>("Password")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("QipUserId")
-                        .HasColumnType("int");
 
                     b.Property<double>("Rating")
                         .HasColumnType("float");

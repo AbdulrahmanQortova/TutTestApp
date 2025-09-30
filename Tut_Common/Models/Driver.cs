@@ -28,8 +28,6 @@ public class Driver
     public double Rating { get; set; }
     [ProtoMember(12)]
     public double TotalEarnings { get; set; }
-    
-    public int QipUserId { get; set; }
     public string FullName {get => FirstName + " " + LastName; }
     public List<Trip>? Trips { get; set; } = [];
 
