@@ -1,14 +1,21 @@
+using CommunityToolkit.Maui;
+using CommunityToolkit.Maui.Core;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Grpc.Net.Client;
 using System.Collections.ObjectModel;
 using Tut.Common.Models;
 using ProtoBuf.Grpc.Client;
 using System.Diagnostics;
 using Tut.Common.GServices;
+using TutBackOffice.Pages;
+using CommunityToolkit.Maui.Extensions;
+using Mapsui.Logging;
+using Microsoft.Maui.Controls.Shapes;
 
 namespace TutBackOffice.PageModels;
 
-public partial class DriversManagementPageModel : ObservableObject
+public partial class DriversManagementPageModel(IPopupService popupService) : ObservableObject
 {
     [ObservableProperty]
     private ObservableCollection<Driver> _drivers = [];
@@ -57,86 +64,96 @@ public partial class DriversManagementPageModel : ObservableObject
         }
         _driverManagerService = null;
     }
-    
-    /*
-    
+
+
     [RelayCommand]
-    public async Task ShowEdit(DriverType driver)
+    private async Task ShowAdd()
     {
-       
-        if (driver != null)
-        {
-            SelectedDriver = driver;
-            await PopupNavigation.Instance.PushAsync(new EditDriverPopup(driver));
-        }
-    }
-    [RelayCommand]
-    public async Task ShowAdd()
-    {
-        SelectedDriver = new DriverType();
-        await PopupNavigation.Instance.PushAsync(new AddDriverPopup());
-    }
-    [RelayCommand]
-    public async Task EditDriver(DriverType driver)
-    {
-     
-        if (driver != null)
-        {
-            await _driverService.UpdateDriver(driver);
-            await GetAllDrivers();
-            await PopupNavigation.Instance.PopAsync();
-            SelectedDriver = new DriverType();
-        }
-    }
-    [RelayCommand]
-    public async Task DeleteDriver(DriverType driver)
-    {
-        bool answer = await Shell.Current.DisplayAlert("Delete", $"Are you sure you want to delete {driver.Username}?", "Yes", "No");
-        if (answer)
-        {
-            string errorStr = (await _driverService.DeleteDriver(driver.Id)).ErrorMsg;
-            if (string.IsNullOrEmpty(errorStr))
-            {
-                Alldrivers.Remove(driver);
-                await GetAllDrivers();
-                SelectedDriver = new DriverType();
-            }
-            else
-            {
-                await ShowAlert(errorStr);
-            }
-        }
-    }
-    [RelayCommand]
-    public async Task AddNewDriver(DriverType driver)
-    {
-        if (driver != null)
-        {
-            int dnum = Alldrivers?.Count ?? 0;
-            driver.NationalId = $"{"D"+dnum}";
-            driver.Image = "D2";
-            string Result=   await _driverService.AddDriver(driver);
-            if (!string.IsNullOrEmpty(Result)) 
-            {
-                await PopupNavigation.Instance.PushAsync(new ToastPopup()
-                {
-                    Message = $"{Result}"
-                });
-                return;
-            }
-            await GetAllDrivers();
-            SelectedDriver = new DriverType();
-            await PopupNavigation.Instance.PopAsync();
-        }
+        await ShowAddEditPopup(null);
     }
 
     [RelayCommand]
-    private void DriverRoute(DriverType driver)
+    private async Task ShowEdit(Driver driver)
     {
-        Shell.Current.GoToAsync(nameof(DriverHistoryPage), new ShellNavigationQueryParameters
-        {
-            ["Driver"] = driver
-        });
+        await ShowAddEditPopup(driver);
     }
-    */
+
+    [RelayCommand]
+    private async Task ShowAddEditPopup(Driver? driver)
+    {
+        try
+        {
+            Dictionary<string, object> queryAttributes = [];
+            if(driver != null)
+                queryAttributes.Add("Driver", driver);
+
+            IPopupResult<Driver> result = await popupService.ShowPopupAsync<DriverAddEditViewModel, Driver>(
+                Shell.Current,
+                options:new PopupOptions
+                {
+                    CanBeDismissedByTappingOutsideOfPopup = false,
+                    PageOverlayColor = Colors.WhiteSmoke.WithAlpha(0.2f),
+                    Shape = null,
+                },
+                shellParameters:queryAttributes);
+
+
+            Driver? resultDriver = result.Result;
+            if (resultDriver is null)
+            {
+                // Cancelled - nothing to do
+                return;
+            }
+
+            if (_driverManagerService == null)
+            {
+                Debug.WriteLine("Driver manager service not initialized");
+                return;
+            }
+
+            // If Id == 0 assume new driver
+            if (resultDriver.Id == 0)
+            {
+                try
+                {
+                    var addRes = await _driverManagerService.AddDriver(resultDriver);
+                    // if backend returned an id, update local instance
+                    if (addRes.Id != 0)
+                    {
+                        resultDriver.Id = addRes.Id;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine(ex);
+                }
+            }
+            else
+            {
+                try
+                {
+                    await _driverManagerService.UpdateDriver(resultDriver);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine(ex);
+                }
+            }
+
+            // Refresh full list to keep UI in sync
+            try
+            {
+                var drivers = await _driverManagerService.GetAllDrivers();
+                Drivers = new ObservableCollection<Driver>(drivers);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex);
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+        }
+    }
 }

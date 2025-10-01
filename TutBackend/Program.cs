@@ -1,5 +1,4 @@
 using ProtoBuf.Grpc.Server;
-using Tut.Common.GServices;
 using TutBackend.Data;
 using TutBackend.Repositories;
 using TutBackend.Services;
@@ -32,7 +31,18 @@ public static class Program
         builder.Services.AddScoped<IStopRepository, StopRepository>();
         builder.Services.AddScoped<IDriverLocationRepository, DriverLocationRepository>();
         builder.Services.AddScoped<QipClient>();
-        builder.Services.AddHttpClient();
+
+        // Read Qip base address from configuration in a null-safe way
+        var qipBaseAddress = builder.Configuration.GetValue<string>("Qip:BaseAddress");
+        if (string.IsNullOrWhiteSpace(qipBaseAddress))
+        {
+            throw new InvalidOperationException("Configuration value 'Qip:BaseAddress' is missing. Please set it in appsettings.json or environment variables.");
+        }
+
+        builder.Services.AddHttpClient<QipClient>(client =>
+        {
+            client.BaseAddress = new Uri(qipBaseAddress);
+        });
 
         var app = builder.Build();
 

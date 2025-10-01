@@ -4,20 +4,19 @@ namespace TutBackOffice.Pages;
 
 public partial class DriversManagementPage : ContentPage
 {
-    private readonly DriversManagementPageModel _model = new();
-    public DriversManagementPage()
+    public DriversManagementPage(DriversManagementPageModel model)
     {
         InitializeComponent();
-        BindingContext = _model;
+        BindingContext = model;
 
         NavigatedTo += (_, _) =>
         {
-            _model.Start();
+            model.Start();
         };
 
         NavigatedFrom += (_, _) =>
         {
-            _model.Stop();
+            model.Stop();
         };
     }
 }

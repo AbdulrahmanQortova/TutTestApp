@@ -2,6 +2,8 @@
 using Microsoft.Extensions.Logging;
 using SkiaSharp.Views.Maui.Controls.Hosting;
 using System.Diagnostics;
+using TutBackOffice.PageModels;
+using TutBackOffice.Pages;
 
 namespace TutBackOffice;
 
@@ -31,6 +33,11 @@ public static class MauiProgram
         };
 
 #endif
+
+        builder.Services.AddTransientPopup<DriverAddEditPopup, DriverAddEditViewModel>();
+
+
+        builder.Services.AddTransient<DriversManagementPageModel>();
 
         return builder.Build();
     }

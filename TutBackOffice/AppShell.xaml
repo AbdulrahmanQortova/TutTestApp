@@ -19,12 +19,12 @@
     </Shell.FlyoutHeader>
 
     <ShellContent
-        Title="Home"
-        ContentTemplate="{DataTemplate local:MainPage}"
-        Route="MainPage" />
-    <ShellContent
         Title="Drivers Management"
         ContentTemplate="{DataTemplate pages:DriversManagementPage}"
         Route="DriversManagementPage" />
+    <ShellContent
+        Title="Home"
+        ContentTemplate="{DataTemplate local:MainPage}"
+        Route="MainPage" />
 
 </Shell>

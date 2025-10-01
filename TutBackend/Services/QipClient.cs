@@ -2,14 +2,9 @@ namespace TutBackend.Services;
     /// <summary>
     /// Simple HTTP client wrapper for Qip API auth endpoints.
     /// </summary>
-    public sealed class QipClient
+    public sealed class QipClient(HttpClient httpClient)
     {
-        private readonly HttpClient _http;
-
-        public QipClient(HttpClient http)
-        {
-            _http = http ?? throw new ArgumentNullException(nameof(http));
-        }
+        private readonly HttpClient _http = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
 
         /// <summary>
         /// Convenience factory that creates an HttpClient with the given base address.

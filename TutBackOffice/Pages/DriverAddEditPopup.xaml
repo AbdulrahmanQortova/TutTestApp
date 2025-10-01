@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<toolkit:Popup xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="TutBackOffice.Pages.DriverAddEditPopup"
+             x:DataType="pagemodels:DriverAddEditViewModel"
+             x:TypeArguments="models:Driver"
+             xmlns:models="clr-namespace:Tut.Common.Models;assembly=Tut_Common"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             xmlns:pagemodels="clr-namespace:TutBackOffice.PageModels"
+             BackgroundColor="Transparent">
+
+    <Border Padding="16" StrokeThickness="0" BackgroundColor="{DynamicResource BackgroundColor}" StrokeShape="RoundRectangle 12" WidthRequest="520">
+        <VerticalStackLayout Spacing="12">
+            <Label Text="Driver" FontAttributes="Bold" FontSize="18" />
+
+            <Grid ColumnDefinitions="*,*" RowDefinitions="auto,auto,auto,auto,auto,auto" ColumnSpacing="12">
+                <Label Text="Mobile" Grid.Row="0" Grid.Column="0" />
+                <Entry Grid.Row="0" Grid.Column="1" 
+                       Text="{Binding Mobile, Mode=TwoWay}"
+                       IsReadOnly="{Binding IsMobileReadOnly}"
+                       Keyboard="Telephone" />
+                
+                <Label Text="Password" Grid.Row="1" Grid.Column="0" />
+                <Entry Grid.Row="1" Grid.Column="1" Text="{Binding Password, Mode=TwoWay}" />
+
+                <Label Text="First name" Grid.Row="2" Grid.Column="0" />
+                <Entry Grid.Row="2" Grid.Column="1" Text="{Binding FirstName, Mode=TwoWay}" />
+
+                <Label Text="Last name" Grid.Row="3" Grid.Column="0" />
+                <Entry Grid.Row="3" Grid.Column="1" Text="{Binding LastName, Mode=TwoWay}" />
+
+
+                <Label Text="Email" Grid.Row="4" Grid.Column="0" />
+                <Entry Grid.Row="4" Grid.Column="1" Text="{Binding Email, Mode=TwoWay}" Keyboard="Email" />
+
+                <Label Text="National Id" Grid.Row="5" Grid.Column="0" />
+                <Entry Grid.Row="5" Grid.Column="1" Text="{Binding NationalId, Mode=TwoWay}" />
+
+            </Grid>
+
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                <Button Text="Save" x:Name="SaveButton" BackgroundColor="#2e86de" TextColor="White"
+                        Command="{Binding SaveCommand}"/>
+                <Button Grid.Column="1" Text="Cancel" x:Name="CancelButton" BackgroundColor="#6c757d" TextColor="White" 
+                        Command="{Binding CancelCommand}"/>
+            </Grid>
+        </VerticalStackLayout>
+    </Border>
+</toolkit:Popup>
