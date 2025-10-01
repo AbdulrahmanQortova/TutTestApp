@@ -4,5 +4,7 @@ namespace TutBackend.Repositories;
 
 public interface IDriverLocationRepository : IRepository<DriverLocation>
 {
+    Task<List<DriverLocation>> GetLatestDriverLocations();
+    Task<List<DriverLocation>> GetLocationHistoryForDriver(int driverId, DateTime since);
 }
 

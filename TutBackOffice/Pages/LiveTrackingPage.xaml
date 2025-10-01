@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:mapsui="clr-namespace:Mapsui.UI.Maui;assembly=Mapsui.UI.Maui"
+             xmlns:pageModels="clr-namespace:TutBackOffice.PageModels"
+             x:Class="TutBackOffice.Pages.LiveTrackingPage"
+             x:DataType="pageModels:LiveTrackingPageModel"
+
+             Title="CurrentTrips">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="40" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="100" />
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0"
+              ColumnDefinitions="*,100,60"
+              ColumnSpacing="10">
+            <Button Grid.Column="2" Text="Filter" Clicked="FilterDriversClicked" />
+            <Button Grid.Column="1" Text="Recenter" Clicked="RecenterClicked" />
+        </Grid>
+        
+
+        <ListView Grid.Row="1" 
+                  x:Name="DriverList"
+                  WidthRequest="300"
+                  HorizontalOptions="End"
+                  BackgroundColor="Black"
+                  ZIndex="2"
+                  IsVisible="True"
+                  ItemsSource="{Binding Drivers}"
+                  >
+            <ListView.ItemTemplate>
+                <DataTemplate x:DataType="viewModel:DriverFilterRow">
+                    <ViewCell>
+                        <HorizontalStackLayout VerticalOptions="Center">
+                            <CheckBox IsChecked="{Binding Selected}" />
+                            <Label Text = "{Binding Name}" VerticalOptions="Center" VerticalTextAlignment="Center"/>
+                        </HorizontalStackLayout>
+                    </ViewCell>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+            <Grid Grid.Row="1">
+            <mapsui:MapView x:Name="mapView" 
+                     ZIndex="1"
+                     HorizontalOptions="FillAndExpand" VerticalOptions="FillAndExpand"
+                     />
+            
+            <!-- Hover Card -->
+            <Frame x:Name="hoverCard" 
+                   IsVisible="False" 
+                   BackgroundColor="{AppThemeBinding Light=whiteSmoke,Dark=black}"
+                   BorderColor="#DDDDDD"
+                   CornerRadius="10"
+                   Padding="15"
+                   Margin="10"
+                   HasShadow="True"
+                   WidthRequest="300"
+                   HeightRequest="215"
+                   HorizontalOptions="Start"
+                   VerticalOptions="Start"
+                   ZIndex="2">
+                <StackLayout Spacing="8">
+                    <Grid ColumnDefinitions="Auto,*">
+                        <Image x:Name="hoverCardIcon" Source="car_available2.png" WidthRequest="40" HeightRequest="40" />
+                        <StackLayout Grid.Column="1" Margin="10,0,0,0">
+                            <Label x:Name="hoverCardTitle" Text="BYD HAN" FontSize="18" FontAttributes="Bold" />
+                            <FlexLayout>
+                                <Frame Padding="5,2" BackgroundColor="{AppThemeBinding Light=whiteSmoke,Dark=black}" CornerRadius="5">
+                                    <Label x:Name="hoverCardPlate" Text="9238 - ص ع ل" FontSize="12" />
+                                </Frame>
+                                <Frame Padding="5,2" BackgroundColor="#D4EDDA" CornerRadius="5" Margin="5,0,0,0">
+                                    <Label x:Name="hoverCardStatus" Text="Ongoing" FontSize="12" TextColor="#155724" />
+                                </Frame>
+                            </FlexLayout>
+                        </StackLayout>
+                    </Grid>
+                    
+                    <BoxView HeightRequest="1" BackgroundColor="#EEEEEE" Margin="0,5" />
+                    
+                    <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto">
+                        <Image Grid.Row="0" Source="driver.png" WidthRequest="20" HeightRequest="20" />
+                        <Label x:Name="hoverCardDriverName" Grid.Row="0" Grid.Column="1" Text="Ahmed Mohamed" FontSize="14" Margin="10,0,0,0" />
+                        
+                        <!--<Image Grid.Row="1" Source="location.png" WidthRequest="20" HeightRequest="20" Margin="0,10,0,0" />
+                        <Label x:Name="hoverCardPickup" Grid.Row="1" Grid.Column="1" Text="Sheraton, Cairo" FontSize="14" Margin="10,10,0,0" />-->
+                        
+                        <Image Grid.Row="2" Source="destination.png" WidthRequest="20" HeightRequest="20" Margin="0,10,0,0" />
+                        <Label x:Name="hoverCardDestination" Grid.Row="2" Grid.Column="1" Text="Roxy Square" FontSize="14" Margin="10,10,0,0" />
+                    </Grid>
+                </StackLayout>
+            </Frame>
+        </Grid>
+
+    </Grid>
+</ContentPage>

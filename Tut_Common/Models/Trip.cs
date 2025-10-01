@@ -13,6 +13,7 @@ public class Trip
     public required User User { get; set; }
     
     [ProtoMember(3)]
+    
     public Driver? Driver { get; set; }
     
     [ProtoMember(4)]
@@ -55,6 +56,10 @@ public class Trip
 
     [ProtoMember(20)]
     public string Route { get; set; } = string.Empty;
+    
+    
+    public bool IsActive => Status is TripState.Requested or TripState.DriverArrived or TripState.Started or TripState.Arrived;
+    
 }
 public enum TripState
 {

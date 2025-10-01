@@ -2,12 +2,11 @@
 
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:pagemodels="clr-namespace:TutBackOffice.PageModels"
-             xmlns:pages="clr-namespace:TutBackOffice.Pages"
+             xmlns:pageModels="clr-namespace:TutBackOffice.PageModels"
              xmlns:converters="clr-namespace:TutMauiCommon.Converters;assembly=TutMauiCommon"
              xmlns:models="clr-namespace:Tut.Common.Models;assembly=Tut_Common"
              x:Class="TutBackOffice.Pages.DriversManagementPage"
-             x:DataType="pagemodels:DriversManagementPageModel"
+             x:DataType="pageModels:DriversManagementPageModel"
              Shell.NavBarIsVisible="False">
 
     <ContentPage.Resources>
@@ -254,17 +253,17 @@
                                                 Text="Edit"
                                                 BackgroundColor="Goldenrod"
                                                 ImageSource="settings.png"
-                                                Command="{Binding Source={RelativeSource AncestorType={x:Type pagemodels:DriversManagementPageModel}}, Path=ShowEditCommand}"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type pageModels:DriversManagementPageModel}}, Path=ShowEditCommand}"
                                                 CommandParameter="{Binding .}" />
                                         <Button Grid.Column="1"
                                                 Text="Route"
                                                 BackgroundColor="Goldenrod"
-                                                Command="{Binding Source={RelativeSource AncestorType={x:Type pagemodels:DriversManagementPageModel}}, Path=DriverRouteCommand}"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type pageModels:DriversManagementPageModel}}, Path=DriverRouteCommand}"
                                                 CommandParameter="{Binding .}" />
                                         <Button Grid.Column="2"
                                                 Text="Block"
                                                 BackgroundColor="Red"
-                                                Command="{Binding Source={RelativeSource AncestorType={x:Type pagemodels:DriversManagementPageModel}}, Path=DeleteDriverCommand}"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type pageModels:DriversManagementPageModel}}, Path=DeleteDriverCommand}"
                                                 CommandParameter="{Binding .}" />
                                     </Grid>
                                 </Grid>
