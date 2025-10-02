@@ -11,7 +11,6 @@
 
     <ContentPage.Resources>
         <converters:RatingColorConverter x:Key="RatingColorConverter" />
-        <converters:NullToBoolConverter x:Key="NullToBoolConverter" />
         <converters:StatusTextColorConverter x:Key="StatusTextColorConverter" />
 
         <!-- Reusable style for table header labels -->
@@ -19,7 +18,7 @@
             <Setter Property="FontSize" Value="13" />
             <Setter Property="TextColor" Value="{DynamicResource SecondaryTextColor}" />
             <Setter Property="VerticalOptions" Value="Center" />
-            <Setter Property="HorizontalOptions" Value="Center"/>
+            <Setter Property="HorizontalOptions" Value="Center" />
         </Style>
     </ContentPage.Resources>
 
@@ -28,7 +27,7 @@
           RowSpacing="20"
           RowDefinitions="auto,*">
         <!-- Header Row -->
-        <Grid ColumnDefinitions="*,*,*,*,auto" ColumnSpacing="10">
+        <Grid ColumnDefinitions="*,*,*,auto" ColumnSpacing="10">
             <Grid.Resources>
                 <Style TargetType="Border">
                     <Setter Property="Padding" Value="20,10" />
@@ -38,14 +37,12 @@
             </Grid.Resources>
             <Border>
                 <Grid ColumnDefinitions="70,*" ColumnSpacing="10"
-                      RowDefinitions="*,*" RowSpacing="10"
-                      >
+                      RowDefinitions="*,*" RowSpacing="10">
                     <Border WidthRequest="70"
                             HeightRequest="70"
                             StrokeShape="RoundRectangle 35"
                             BackgroundColor="{StaticResource Primary}" Padding="5"
-                            Grid.RowSpan="2"
-                            >
+                            Grid.RowSpan="2">
                         <Image Source="whitecar" />
                     </Border>
                     <Label Grid.Column="1" Grid.Row="0" Text="Total Drivers" />
@@ -61,24 +58,11 @@
 
                     <VerticalStackLayout Grid.Column="1" Spacing="10" VerticalOptions="Center">
                         <Label Text="Available Drivers" />
-                        <Label Text="{Binding TotalDriversAvailable}" />
+                        <Label Text="{Binding TotalAvailableDrivers}" />
                     </VerticalStackLayout>
                 </Grid>
             </Border>
-            <Border Grid.Column="2">
-                <Grid ColumnDefinitions="auto,*" ColumnSpacing="10">
-                    <Border WidthRequest="70" HeightRequest="70" StrokeShape="RoundRectangle 35"
-                            BackgroundColor="#FA5A7D" Padding="5">
-                        <Image Source="whitecar" />
-                    </Border>
-
-                    <VerticalStackLayout Grid.Column="1" Spacing="10" VerticalOptions="Center">
-                        <Label Text="Ongoing Trips" />
-                        <Label Text="{Binding OngoingTrips}" />
-                    </VerticalStackLayout>
-                </Grid>
-            </Border>
-            <Border Grid.Column="4" BackgroundColor="White"
+            <Border Grid.Column="3" BackgroundColor="White"
                     VerticalOptions="Center"
                     StrokeShape="RoundRectangle 11"
                     Stroke="#DEE2E6"
@@ -100,178 +84,152 @@
 
         </Grid>
 
-        <!-- Existing table grid -->
-        <Grid Grid.Row="1" Margin="0,10,0,0"
-              BackgroundColor="Transparent"
-              Padding="16">
+        <!-- Table -->
+        <Grid Grid.Row="0" RowDefinitions="auto,50,*" RowSpacing="10">
+            <!-- Header -->
+            <Label Text="Driver Status"
+                   FontSize="20"
+                   FontAttributes="Bold" />
+            <!-- Table Header -->
+            <Grid Grid.Row="0"
+                  ColumnDefinitions="*,*,*,*,*,*,*,*,*,*"
+                  Padding="20,10"
+                  HeightRequest="50"
+                  VerticalOptions="Start"
+                  ColumnSpacing="10"
+                  BackgroundColor="{DynamicResource BackgroundColor}">
+                <Label
+                    Text="Name"
+                    Style="{StaticResource TableHeaderLabelStyle}" />
+                <Label Grid.Column="1"
+                       Text="Rate"
+                       Style="{StaticResource TableHeaderLabelStyle}" />
+                <Label Grid.Column="2"
+                       Text="Mobile"
+                       Style="{StaticResource TableHeaderLabelStyle}" />
 
-            <Grid RowDefinitions="auto,*" RowSpacing="10">
-                <!-- Header -->
-                <Label Text="Driver Status"
-                       FontSize="20"
-                       FontAttributes="Bold" />
-                <!-- Table -->
-                <Grid Grid.Row="1" RowDefinitions="50,*" RowSpacing="10">
-                    <!-- Table Header -->
-                    <Grid Grid.Row="0"
-                          ColumnDefinitions="*,*,*,*,*,*,*,*,*,*"
-                          Padding="20,10"
-                          HeightRequest="50"
-                          VerticalOptions="Start"
-                          ColumnSpacing="10"
-                          BackgroundColor="{DynamicResource BackgroundColor}">
-                        <Label
-                            Text="Name"
-                            Style="{StaticResource TableHeaderLabelStyle}"
-                            />
-                        <Label Grid.Column="1"
-                               Text="Rate"
-                               Style="{StaticResource TableHeaderLabelStyle}"
-                               />
-                        <Label Grid.Column="2"
-                               Text="Mobile"
-                               Style="{StaticResource TableHeaderLabelStyle}"
-                               />
-
-                        <Label Grid.Column="3"
-                               Text="Car Number"
-                               Style="{StaticResource TableHeaderLabelStyle}"
-                               />
-                        <Label Grid.Column="4"
-                               Text="Email"
-                               Style="{StaticResource TableHeaderLabelStyle}"
-                               />
-                        <Label Grid.Column="5"
-                               Text="Nid"
-                               Style="{StaticResource TableHeaderLabelStyle}"
-                               />
-                        <Label Grid.Column="6"
-                               Text="Status"
-                               Style="{StaticResource TableHeaderLabelStyle}"
-                               />
-                        <Label Grid.Column="7"
-                               Text="TotalTrips"
-                               Style="{StaticResource TableHeaderLabelStyle}"
-                               />
-                        <Label Grid.Column="8"
-                               Text="TotalPrice"
-                               Style="{StaticResource TableHeaderLabelStyle}"
-                               />
-                        <Label Grid.Column="9"
-                               Text="Actions"
-                               Style="{StaticResource TableHeaderLabelStyle}"
-                               />
-                    </Grid>
-                    <!-- Table Content -->
-                    <CollectionView Grid.Row="1"
-                                    HorizontalScrollBarVisibility="Always"
-                                    ItemsSource="{Binding Drivers}"
-                                    SelectionMode="Single">
-                        <CollectionView.ItemTemplate>
-                            <DataTemplate x:DataType="models:Driver">
-                                <Grid
-                                    ColumnDefinitions="*,80,*,*,150,*,110,*,*,225"
-                                    Padding="20,10"
-                                    ColumnSpacing="8"
-                                    BackgroundColor="Transparent"
-                                    >
-                                    <Label
-                                        Text="{Binding FullName}"
-                                        VerticalOptions="Center" />
-
-                                    <!-- Rating Stars -->
-                                    <HorizontalStackLayout Grid.Column="1" 
-                                                           Spacing="2"
-                                                           HorizontalOptions="Center"
-                                                           VerticalOptions="Center">
-                                        <Label Text="★"
-                                               TextColor="{Binding Rating, Converter={StaticResource RatingColorConverter}, ConverterParameter=1}" />
-                                        <Label Text="★"
-                                               TextColor="{Binding Rating, Converter={StaticResource RatingColorConverter}, ConverterParameter=2}" />
-                                        <Label Text="★"
-                                               TextColor="{Binding Rating, Converter={StaticResource RatingColorConverter}, ConverterParameter=3}" />
-                                        <Label Text="★"
-                                               TextColor="{Binding Rating, Converter={StaticResource RatingColorConverter}, ConverterParameter=4}" />
-                                        <Label Text="★"
-                                               TextColor="{Binding Rating, Converter={StaticResource RatingColorConverter}, ConverterParameter=5}" />
-                                    </HorizontalStackLayout>
-                                    <Label Grid.Column="2"
-                                           Text="{Binding Mobile}"
-                                           VerticalOptions="Center" 
-                                           HorizontalOptions="Center"
-                                           />
-                                    <Label Grid.Column="3"
-                                           Text="None"
-                                           VerticalOptions="Center"
-                                           HorizontalOptions="Center" 
-                                           />
-                                    <Label Grid.Column="4"
-                                           Text="{Binding Email}"
-                                           VerticalOptions="Center"
-                                           HorizontalOptions="Center" 
-                                           />
-                                    <Label Grid.Column="5"
-                                           Text="{Binding NationalId}"
-                                           VerticalOptions="Center"
-                                           HorizontalOptions="Center"
-                                           />
-                                    <Border Grid.Column="6"
-                                            Padding="10,0"
-                                            Stroke="{Binding State, Converter={StaticResource StatusTextColorConverter}}"
-                                            BackgroundColor="Transparent"
-                                            StrokeShape="RoundRectangle 8"
-                                            StrokeThickness="1">
-                                        <Label Text="{Binding State}"
-                                               HorizontalOptions="Center"
-                                               VerticalOptions="Center"
-                                               FontSize="14"
-                                               TextColor="{Binding State, Converter={StaticResource StatusTextColorConverter}}" />
-                                    </Border>
-                                    <Label Grid.Column="7"
-                                           Text="{Binding TotalTrips}"
-                                           HorizontalOptions="Center"
-                                           VerticalOptions="Center" />
-                                    <Label Grid.Column="8"
-                                           Text="{Binding TotalEarnings, StringFormat='{0:C}'}"
-                                           HorizontalOptions="Center"
-                                           VerticalOptions="Center" />
-                                    <!-- Actions -->
-                                    <Grid Grid.Column="9"
-                                          ColumnSpacing="10"
-                                          ColumnDefinitions="*,*,*"
-                                          VerticalOptions="Center"
-                                          HorizontalOptions="Fill">
-                                        <Grid.Resources>
-                                            <Style TargetType="Button">
-                                                <Setter Property="Padding" Value="10,0" />
-                                                <Setter Property="HeightRequest" Value="30" />
-                                                <Setter Property="CornerRadius" Value="4" />
-                                                <Setter Property="VerticalOptions" Value="Center" />
-                                            </Style>
-                                        </Grid.Resources>
-                                        <Button
-                                                Text="Edit"
-                                                BackgroundColor="Goldenrod"
-                                                ImageSource="settings.png"
-                                                Command="{Binding Source={RelativeSource AncestorType={x:Type pageModels:DriversManagementPageModel}}, Path=ShowEditCommand}"
-                                                CommandParameter="{Binding .}" />
-                                        <Button Grid.Column="1"
-                                                Text="Route"
-                                                BackgroundColor="Goldenrod"
-                                                Command="{Binding Source={RelativeSource AncestorType={x:Type pageModels:DriversManagementPageModel}}, Path=DriverRouteCommand}"
-                                                CommandParameter="{Binding .}" />
-                                        <Button Grid.Column="2"
-                                                Text="Block"
-                                                BackgroundColor="Red"
-                                                Command="{Binding Source={RelativeSource AncestorType={x:Type pageModels:DriversManagementPageModel}}, Path=DeleteDriverCommand}"
-                                                CommandParameter="{Binding .}" />
-                                    </Grid>
-                                </Grid>
-                            </DataTemplate>
-                        </CollectionView.ItemTemplate>
-                    </CollectionView>
-                </Grid>
+                <Label Grid.Column="3"
+                       Text="Car Number"
+                       Style="{StaticResource TableHeaderLabelStyle}" />
+                <Label Grid.Column="4"
+                       Text="Email"
+                       Style="{StaticResource TableHeaderLabelStyle}" />
+                <Label Grid.Column="5"
+                       Text="Nid"
+                       Style="{StaticResource TableHeaderLabelStyle}" />
+                <Label Grid.Column="6"
+                       Text="Status"
+                       Style="{StaticResource TableHeaderLabelStyle}" />
+                <Label Grid.Column="7"
+                       Text="TotalTrips"
+                       Style="{StaticResource TableHeaderLabelStyle}" />
+                <Label Grid.Column="8"
+                       Text="TotalPrice"
+                       Style="{StaticResource TableHeaderLabelStyle}" />
+                <Label Grid.Column="9"
+                       Text="Actions"
+                       Style="{StaticResource TableHeaderLabelStyle}" />
             </Grid>
+            <!-- Table Content -->
+            <CollectionView Grid.Row="1"
+                            HorizontalScrollBarVisibility="Always"
+                            ItemsSource="{Binding Drivers}"
+                            SelectionMode="Single">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:Driver">
+                        <Grid
+                            ColumnDefinitions="*,80,*,*,150,*,110,*,*,225"
+                            Padding="20,10"
+                            ColumnSpacing="8"
+                            BackgroundColor="Transparent">
+                            <Label
+                                Text="{Binding FullName}"
+                                VerticalOptions="Center" />
+
+                            <!-- Rating Stars -->
+                            <HorizontalStackLayout Grid.Column="1"
+                                                   Spacing="2"
+                                                   HorizontalOptions="Center"
+                                                   VerticalOptions="Center">
+                                <Label Text="★"
+                                       TextColor="{Binding Rating, Converter={StaticResource RatingColorConverter}, ConverterParameter=1}" />
+                                <Label Text="★"
+                                       TextColor="{Binding Rating, Converter={StaticResource RatingColorConverter}, ConverterParameter=2}" />
+                                <Label Text="★"
+                                       TextColor="{Binding Rating, Converter={StaticResource RatingColorConverter}, ConverterParameter=3}" />
+                                <Label Text="★"
+                                       TextColor="{Binding Rating, Converter={StaticResource RatingColorConverter}, ConverterParameter=4}" />
+                                <Label Text="★"
+                                       TextColor="{Binding Rating, Converter={StaticResource RatingColorConverter}, ConverterParameter=5}" />
+                            </HorizontalStackLayout>
+                            <Label Grid.Column="2"
+                                   Text="{Binding Mobile}"
+                                   VerticalOptions="Center"
+                                   HorizontalOptions="Center" />
+                            <Label Grid.Column="3"
+                                   Text="None"
+                                   VerticalOptions="Center"
+                                   HorizontalOptions="Center" />
+                            <Label Grid.Column="4"
+                                   Text="{Binding Email}"
+                                   VerticalOptions="Center"
+                                   HorizontalOptions="Center" />
+                            <Label Grid.Column="5"
+                                   Text="{Binding NationalId}"
+                                   VerticalOptions="Center"
+                                   HorizontalOptions="Center" />
+                            <Border Grid.Column="6"
+                                    Padding="10,0"
+                                    Stroke="{Binding State, Converter={StaticResource StatusTextColorConverter}}"
+                                    BackgroundColor="Transparent"
+                                    StrokeShape="RoundRectangle 8"
+                                    StrokeThickness="1">
+                                <Label Text="{Binding State}"
+                                       HorizontalOptions="Center"
+                                       VerticalOptions="Center"
+                                       FontSize="14"
+                                       TextColor="{Binding State, Converter={StaticResource StatusTextColorConverter}}" />
+                            </Border>
+                            <Label Grid.Column="7"
+                                   Text="{Binding TotalTrips}"
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="Center" />
+                            <Label Grid.Column="8"
+                                   Text="{Binding TotalEarnings, StringFormat='{0:C}'}"
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="Center" />
+                            <!-- Actions -->
+                            <Grid Grid.Column="9"
+                                  ColumnSpacing="10"
+                                  ColumnDefinitions="*,*"
+                                  VerticalOptions="Center"
+                                  HorizontalOptions="Fill"
+                                  x:DataType="pageModels:DriversManagementPageModel"
+                                  >
+                                <Grid.Resources>
+                                    <Style TargetType="Button">
+                                        <Setter Property="Padding" Value="10,0" />
+                                        <Setter Property="HeightRequest" Value="30" />
+                                        <Setter Property="CornerRadius" Value="4" />
+                                        <Setter Property="VerticalOptions" Value="Center" />
+                                    </Style>
+                                </Grid.Resources>
+                                <Button
+                                    Text="Edit"
+                                    BackgroundColor="Goldenrod"
+                                    ImageSource="settings.png"
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type pageModels:DriversManagementPageModel}}, Path=ShowEditCommand}"
+                                    CommandParameter="{Binding .}" />
+                                <Button Grid.Column="1"
+                                        Text="History"
+                                        BackgroundColor="Goldenrod"
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type pageModels:DriversManagementPageModel}}, Path=DriverHistoryCommand}"
+                                        CommandParameter="{Binding .}" />
+                            </Grid>
+                        </Grid>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
         </Grid>
     </Grid>
 </ContentPage>

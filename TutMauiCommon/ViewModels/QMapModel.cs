@@ -23,7 +23,7 @@ public partial class QMapModel : ObservableObject
     private ObservableCollection<MapLine> _lines = [];
 
     [ObservableProperty]
-    private MRect _extent = new(29, 29, 31, 31);
+    private MRect _extent = new(30.5, 30.5, 31, 31);
 
 
     public QMapModel()
@@ -35,9 +35,45 @@ public partial class QMapModel : ObservableObject
     }
 
 
-    private void CalculateExtent()
+    private IEnumerable<(double Lat, double Lon)> EnumerateLocations()
     {
-        
+        // Yield endpoints, stops and cars
+        foreach (var e in EndPoints)
+            yield return (e.Location.Latitude, e.Location.Longitude);
+
+        foreach (var s in Stops)
+            yield return (s.Location.Latitude, s.Location.Longitude);
+
+        foreach (var c in Cars)
+            yield return (c.Location.Latitude, c.Location.Longitude);
+
+        // Lines: both start and end
+        foreach (var line in Lines)
+        {
+            yield return (line.StartPoint.Latitude, line.StartPoint.Longitude);
+            yield return (line.EndPoint.Latitude, line.EndPoint.Longitude);
+        }
+    }
+
+    public void CalculateExtent()
+    {
+        // Collect all point coordinates (latitude, longitude)
+        var points = EnumerateLocations()
+            .Where(p => double.IsFinite(p.Lat) && double.IsFinite(p.Lon))
+            .ToList();
+
+        if (!points.Any())
+            return;
+
+        const double padding = 0.001;
+
+        var minLat = points.Min(p => p.Lat) - padding;
+        var maxLat = points.Max(p => p.Lat) + padding;
+        var minLon = points.Min(p => p.Lon) - padding;
+        var maxLon = points.Max(p => p.Lon) + padding;
+
+        // Mapsui.MRect expects (minX, minY, maxX, maxY) where X=Longitude, Y=Latitude
+        Extent = new MRect(minLon, minLat, maxLon, maxLat);
     }
     
     public class MapRoute
@@ -66,4 +102,3 @@ public partial class QMapModel : ObservableObject
         public int Thickness { get; set; } = 1;
     }
 }
-

@@ -8,30 +8,33 @@ using Tut.Common.Models;
 using ProtoBuf.Grpc.Client;
 using System.Diagnostics;
 using Tut.Common.GServices;
-using TutBackOffice.Pages;
-using CommunityToolkit.Maui.Extensions;
-using Mapsui.Logging;
-using Microsoft.Maui.Controls.Shapes;
 
 namespace TutBackOffice.PageModels;
 
-public partial class DriversManagementPageModel(IPopupService popupService) : ObservableObject
+public partial class DriversManagementPageModel : ObservableObject
 {
     [ObservableProperty]
     private ObservableCollection<Driver> _drivers = [];
 
-    private IGDriverManagerService? _driverManagerService;
+    [ObservableProperty]
+    private int _totalDrivers;
+    [ObservableProperty]
+    private int _totalAvailableDrivers;
 
+    private readonly IGDriverManagerService _driverManagerService;
     private CancellationTokenSource? _cts;
+    private readonly IPopupService _popupService;
+    public DriversManagementPageModel(IPopupService popupService, IGrpcChannelFactory channelFactory)
+    {
+        _popupService = popupService;
+        GrpcChannel channel = channelFactory.GetChannel();
+        _driverManagerService = channel.CreateGrpcService<IGDriverManagerService>();        
+    }
+
+
     public void Start()
     {
         if (_cts != null) return;
-        
-        GrpcClientFactory.AllowUnencryptedHttp2 = true;
-        GrpcChannel channel = GrpcChannel.ForAddress("http://localhost:5040");
-        
-        _driverManagerService = channel.CreateGrpcService<IGDriverManagerService>();        
-        
         _cts = new CancellationTokenSource();
         _ = Task.Run(() => RefreshLoop(_cts.Token));
     }
@@ -48,21 +51,17 @@ public partial class DriversManagementPageModel(IPopupService popupService) : Ob
     {
         while (!token.IsCancellationRequested)
         {
-            if (_driverManagerService != null)
+            try
             {
-                try
-                {
-                    List<Driver> drivers = await _driverManagerService.GetAllDrivers();
-                    Drivers = new ObservableCollection<Driver>(drivers);
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine(ex);
-                }
+                List<Driver> drivers = await _driverManagerService.GetAllDrivers();
+                Drivers = new ObservableCollection<Driver>(drivers);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex);
             }
             await Task.Delay(5000, token);
         }
-        _driverManagerService = null;
     }
 
 
@@ -87,7 +86,7 @@ public partial class DriversManagementPageModel(IPopupService popupService) : Ob
             if(driver != null)
                 queryAttributes.Add("Driver", driver);
 
-            IPopupResult<Driver> result = await popupService.ShowPopupAsync<DriverAddEditViewModel, Driver>(
+            IPopupResult<Driver> result = await _popupService.ShowPopupAsync<DriverAddEditViewModel, Driver>(
                 Shell.Current,
                 options:new PopupOptions
                 {
@@ -102,12 +101,6 @@ public partial class DriversManagementPageModel(IPopupService popupService) : Ob
             if (resultDriver is null)
             {
                 // Cancelled - nothing to do
-                return;
-            }
-
-            if (_driverManagerService == null)
-            {
-                Debug.WriteLine("Driver manager service not initialized");
                 return;
             }
 
@@ -155,5 +148,11 @@ public partial class DriversManagementPageModel(IPopupService popupService) : Ob
         {
             Debug.WriteLine(ex);
         }
+    }
+
+    [RelayCommand]
+    private Task DriverHistory(Driver driver)
+    {
+        return Task.CompletedTask;
     }
 }

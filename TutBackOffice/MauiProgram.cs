@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using SkiaSharp.Views.Maui.Controls.Hosting;
 using System.Diagnostics;
+using Tut.Common.GServices;
 using TutBackOffice.PageModels;
 using TutBackOffice.Pages;
 
@@ -34,10 +35,14 @@ public static class MauiProgram
 
 #endif
 
+//        builder.Services.AddSingleton<IGrpcChannelFactory>(new GrpcChannelFactory("http://qortova.com:8080"));
+        builder.Services.AddSingleton<IGrpcChannelFactory>(new GrpcChannelFactory("http://localhost:5040"));
+        
+        
         builder.Services.AddTransientPopup<DriverAddEditPopup, DriverAddEditViewModel>();
 
-
         builder.Services.AddTransient<DriversManagementPageModel>();
+        builder.Services.AddTransient<LiveTrackingPageModel>();
 
         return builder.Build();
     }

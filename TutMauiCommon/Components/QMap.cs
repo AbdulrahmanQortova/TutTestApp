@@ -9,11 +9,10 @@ using Mapsui.Tiling.Layers;
 using NetTopologySuite.Geometries;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using Tut.Common.Dto.MapDtos;
-using Tut.Common.Models;
 using TutMauiCommon.ViewModels;
 
 using Color = Microsoft.Maui.Graphics.Color;
+using Easing = Mapsui.Animations.Easing;
 using Location = Microsoft.Maui.Devices.Sensors.Location;
 
 namespace TutMauiCommon.Components;
@@ -28,6 +27,8 @@ public class QMap : Mapsui.Map
     private Mapsui.Layers.MemoryLayer CarsLayer { get; }
     private Mapsui.Layers.MemoryLayer ShapesLayer { get; }
 
+    private DateTime _lastProgrammaticViewportChange;
+    private bool _shouldAutoUpdateViewport = true;
     public QMap()
     {
         string cacheDir = Path.Combine(FileSystem.AppDataDirectory, "tut_tiles");
@@ -57,8 +58,21 @@ public class QMap : Mapsui.Map
         };
         Layers.Add(ShapesLayer);
 
+        _lastProgrammaticViewportChange = DateTime.Now;
+        Navigator.ViewportChanged += OnViewportChanged;
     }
 
+    private void OnViewportChanged(object? sender, ViewportChangedEventArgs e)
+    {
+        Console.WriteLine("OnViewportChanged");
+        DateTime n = DateTime.Now;
+        DateTime lst = _lastProgrammaticViewportChange;
+        TimeSpan ts = n - lst;
+        if (ts < TimeSpan.FromMilliseconds(4000))
+            return;
+        Console.WriteLine($"Now: {n}, Last: {lst}");
+        _shouldAutoUpdateViewport = false;
+    }
     public void ShowRouteLayer(bool show)
     {
         RoutesLayer.Enabled = show;
@@ -85,14 +99,24 @@ public class QMap : Mapsui.Map
             _model.PropertyChanged -= OnModelPropertyChanged;
         }
         _model = model;
-        DrawModelCars();
-        DrawModelRoutes();
-        DrawModelShapes();
-
+        Redraw();
         _model.PropertyChanged += OnModelPropertyChanged;
     }
 
+    public void Redraw()
+    {
+        DrawModelCars();
+        DrawModelRoutes();
+        DrawModelShapes();
+        ViewportChanged();
+    }
 
+    public void Recenter()
+    {
+        _shouldAutoUpdateViewport = true;
+        ViewportChanged();
+    }
+    
     private void OnModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         switch (e.PropertyName)
@@ -107,6 +131,9 @@ public class QMap : Mapsui.Map
                 break;
             case nameof(QMapModel.Lines):
                 DrawModelShapes();
+                break;
+            case nameof(QMapModel.Extent):
+                ViewportChanged();
                 break;
         }
     }
@@ -254,10 +281,17 @@ public class QMap : Mapsui.Map
         _shapeFeatures.Clear();
     }
 
-    public void ViewPortChanged()
+    private void ViewportChanged()
     {
         if (_model is null) return;
-        Navigator.ZoomToBox(_model.Extent);
+        if (!_shouldAutoUpdateViewport) return;
+        
+        Coordinate minCoord = Project(_model.Extent.MinX, _model.Extent.MinY);
+        Coordinate maxCoord = Project(_model.Extent.MaxX, _model.Extent.MaxY);
+        MRect box = new MRect(minCoord.X, minCoord.Y, maxCoord.X, maxCoord.Y);
+        _lastProgrammaticViewportChange = DateTime.Now;
+        Console.WriteLine($"Setting Last Change to now: {_lastProgrammaticViewportChange}");
+        Navigator.ZoomToBox(box, MBoxFit.Fit, 200, Easing.CubicInOut);
     }
 
     private static Mapsui.Styles.Color MapsColor(Color color)

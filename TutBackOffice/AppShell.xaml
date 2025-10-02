@@ -19,6 +19,10 @@
     </Shell.FlyoutHeader>
 
     <ShellContent
+        Title="Live Tracking"
+        ContentTemplate="{DataTemplate pages:LiveTrackingPage}"
+        Route="DriversManagementPage" />
+    <ShellContent
         Title="Drivers Management"
         ContentTemplate="{DataTemplate pages:DriversManagementPage}"
         Route="DriversManagementPage" />
