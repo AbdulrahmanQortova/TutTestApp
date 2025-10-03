@@ -16,7 +16,6 @@ public partial class LiveTrackingPage
 
     private readonly LiveTrackingPageModel _pageModel;
     private readonly QMap _map;
-    private bool _shouldAutoAdjustViewport = true;
 
     public LiveTrackingPage(LiveTrackingPageModel pageModel)
     {

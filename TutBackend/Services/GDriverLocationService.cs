@@ -19,9 +19,8 @@ public class GDriverLocationService(IDriverLocationRepository driverLocationRepo
             {
                 if (driverId < 0)
                 {
-                    
+                    driverId = location.DriverId;
                 }
-                driverId = location.DriverId;
                 await driverLocationRepository.AddAsync(location);
             }
         }

@@ -24,4 +24,12 @@ public class GrpcChannelFactory : IGrpcChannelFactory
     {
         return address == _defaultAddress ? _channel : GrpcChannel.ForAddress(address);
     }
+    public GrpcChannel GetNewChannel()
+    {
+        return GrpcChannel.ForAddress(_defaultAddress);
+    }
+    public GrpcChannel GetNewChannel(string address)
+    {
+        return GrpcChannel.ForAddress(address);
+    }
 }

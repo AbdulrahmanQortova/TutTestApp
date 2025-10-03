@@ -21,7 +21,7 @@
     <ShellContent
         Title="Live Tracking"
         ContentTemplate="{DataTemplate pages:LiveTrackingPage}"
-        Route="DriversManagementPage" />
+        Route="LiveTrackingPage" />
     <ShellContent
         Title="Drivers Management"
         ContentTemplate="{DataTemplate pages:DriversManagementPage}"

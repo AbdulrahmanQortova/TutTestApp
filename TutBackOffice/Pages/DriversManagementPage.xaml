@@ -7,7 +7,8 @@
              xmlns:models="clr-namespace:Tut.Common.Models;assembly=Tut_Common"
              x:Class="TutBackOffice.Pages.DriversManagementPage"
              x:DataType="pageModels:DriversManagementPageModel"
-             Shell.NavBarIsVisible="False">
+             Title="Drivers Management"
+             >
 
     <ContentPage.Resources>
         <converters:RatingColorConverter x:Key="RatingColorConverter" />
@@ -85,13 +86,13 @@
         </Grid>
 
         <!-- Table -->
-        <Grid Grid.Row="0" RowDefinitions="auto,50,*" RowSpacing="10">
+        <Grid Grid.Row="1" RowDefinitions="auto,50,*" RowSpacing="10">
             <!-- Header -->
             <Label Text="Driver Status"
                    FontSize="20"
                    FontAttributes="Bold" />
             <!-- Table Header -->
-            <Grid Grid.Row="0"
+            <Grid Grid.Row="1"
                   ColumnDefinitions="*,*,*,*,*,*,*,*,*,*"
                   Padding="20,10"
                   HeightRequest="50"
@@ -131,7 +132,7 @@
                        Style="{StaticResource TableHeaderLabelStyle}" />
             </Grid>
             <!-- Table Content -->
-            <CollectionView Grid.Row="1"
+            <CollectionView Grid.Row="2"
                             HorizontalScrollBarVisibility="Always"
                             ItemsSource="{Binding Drivers}"
                             SelectionMode="Single">

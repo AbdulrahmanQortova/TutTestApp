@@ -64,13 +64,11 @@ public class QMap : Mapsui.Map
 
     private void OnViewportChanged(object? sender, ViewportChangedEventArgs e)
     {
-        Console.WriteLine("OnViewportChanged");
         DateTime n = DateTime.Now;
         DateTime lst = _lastProgrammaticViewportChange;
         TimeSpan ts = n - lst;
-        if (ts < TimeSpan.FromMilliseconds(4000))
+        if (ts < TimeSpan.FromMilliseconds(400))
             return;
-        Console.WriteLine($"Now: {n}, Last: {lst}");
         _shouldAutoUpdateViewport = false;
     }
     public void ShowRouteLayer(bool show)
@@ -290,7 +288,6 @@ public class QMap : Mapsui.Map
         Coordinate maxCoord = Project(_model.Extent.MaxX, _model.Extent.MaxY);
         MRect box = new MRect(minCoord.X, minCoord.Y, maxCoord.X, maxCoord.Y);
         _lastProgrammaticViewportChange = DateTime.Now;
-        Console.WriteLine($"Setting Last Change to now: {_lastProgrammaticViewportChange}");
         Navigator.ZoomToBox(box, MBoxFit.Fit, 200, Easing.CubicInOut);
     }
 

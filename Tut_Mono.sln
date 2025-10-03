@@ -14,6 +14,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TutBackend.Tests", "test\Tu
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TutMauiCommon", "TutMauiCommon\TutMauiCommon.csproj", "{54B827AB-6DD6-4950-8B44-CDEB27F1E322}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TutAgents", "TutAgents\TutAgents.csproj", "{FCF79E81-0394-486E-86D0-D098740767AE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -48,5 +50,9 @@ Global
 		{54B827AB-6DD6-4950-8B44-CDEB27F1E322}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{54B827AB-6DD6-4950-8B44-CDEB27F1E322}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{54B827AB-6DD6-4950-8B44-CDEB27F1E322}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FCF79E81-0394-486E-86D0-D098740767AE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FCF79E81-0394-486E-86D0-D098740767AE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FCF79E81-0394-486E-86D0-D098740767AE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FCF79E81-0394-486E-86D0-D098740767AE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
