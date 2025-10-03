@@ -1,32 +1,47 @@
 using Grpc.Core;
+using ProtoBuf.Grpc;
 using Tut.Common.GServices;
 using Tut.Common.Models;
+using Tut.Common.Utils;
 using TutBackend.Repositories;
 namespace TutBackend.Services;
 
 public class GDriverLocationService(IDriverLocationRepository driverLocationRepository
     , IDriverRepository driverRepository
+    , QipClient qipClient
     , ILogger<GDriverManagerService> logger)
     : IGDriverLocationService
 {
 
-    public async Task RegisterLocation(IAsyncEnumerable<DriverLocation> locations)
+    private Driver? _driver;
+    
+    public async Task RegisterLocation(IAsyncEnumerable<GLocation> locations, CallContext context = default)
     {
-        int driverId = -1;
+        _driver = await AuthUtils.AuthorizeDriver(context, driverRepository, qipClient);
+        if (_driver is null)
+            throw new RpcException(new Status(StatusCode.Unauthenticated, "Unauthorized"));
         try
         {
-            await foreach (DriverLocation location in locations)
+            await foreach (GLocation location in locations)
             {
-                if (driverId < 0)
+                await driverLocationRepository.AddAsync(new DriverLocation
                 {
-                    driverId = location.DriverId;
-                }
-                await driverLocationRepository.AddAsync(location);
+                    DriverId = _driver.Id,
+                    Location = new GLocation
+                    {
+                        Latitude = location.Latitude,
+                        Longitude = location.Longitude,
+                        Altitude = location.Altitude,
+                        Course = location.Course,
+                        Speed = location.Speed,
+                        Timestamp = location.Timestamp
+                    }
+                });
             }
         }
         catch (Exception ex)
         {
-            logger.LogDebug(ex, "Exception in RegisterLocation:{DriverId}", driverId);
+            logger.LogDebug(ex, "Exception in RegisterLocation:{Driver}", _driver?.ToJson());
         }
     }
     

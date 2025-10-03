@@ -1,3 +1,4 @@
+using Grpc.Core;
 using Grpc.Net.Client;
 using ProtoBuf.Grpc;
 using ProtoBuf.Grpc.Client;
@@ -5,23 +6,26 @@ using System.Threading.Channels;
 using Tut.Common.GServices;
 using Tut.Common.Models;
 using Tut.Common.Utils;
+using System.Threading;
 namespace Tut.Agents;
 
 public class DriverAgent
 {
-    private readonly int _driverId;
+    private readonly string _username;
+    private readonly string _password;
     private readonly Options _options;
     private readonly IGDriverLocationService _locationService;
     private GLocation _currentLocation;
     private CancellationTokenSource _runCts = new();
-    private Channel<DriverLocation>? _locationChannel; 
+    private Channel<GLocation>? _locationChannel; 
     
     
     
-    public DriverAgent(int driverId) : this(driverId, new Options()) { }
-    public DriverAgent(int driverId, Options options)
+    public DriverAgent(string username, string password) : this(username, password, new Options()) { }
+    public DriverAgent(string username, string password, Options options)
     {
-        _driverId = driverId;
+        _username = username;
+        _password = password;
         _options = options;
         GrpcClientFactory.AllowUnencryptedHttp2 = true;
         GrpcChannel channel = GrpcChannel.ForAddress("http://localhost:5040");
@@ -32,12 +36,18 @@ public class DriverAgent
 
     public void Start()
     {
-        _locationChannel = Channel.CreateBounded<DriverLocation>(new BoundedChannelOptions(20)
+        _locationChannel = Channel.CreateBounded<GLocation>(new BoundedChannelOptions(20)
         {
             FullMode = BoundedChannelFullMode.DropOldest
         });
         _channelCompleted = false;
-        _locationService.RegisterLocation(_locationChannel.AsAsyncEnumerable());
+        Metadata headers = [];
+        headers.Add("Authorization", $"Bearer {_username}");
+
+        // Start the streaming call without awaiting so it runs in background.
+        var callContext = new CallContext(new CallOptions(headers));
+        _ = _locationService.RegisterLocation(_locationChannel.Reader.ReadAllAsync(), callContext);
+
         _runCts = new CancellationTokenSource();
         _ = Task.Run(() => RunLoop(_runCts.Token));
     }
@@ -47,6 +57,7 @@ public class DriverAgent
         _channelCompleted = true;
         _locationChannel?.Writer.Complete();
         _runCts.Cancel();
+        _runCts.Dispose();
     }
 
 
@@ -69,11 +80,7 @@ public class DriverAgent
     private async Task NotifyLocationChanged()
     {
         if (!_channelCompleted && _locationChannel is not null)
-            await _locationChannel.Writer.WriteAsync(new DriverLocation
-            {
-                DriverId = _driverId,
-                Location = _currentLocation
-            });
+            await _locationChannel.Writer.WriteAsync(_currentLocation);
     }
     
     private async Task WanderLoop(CancellationToken ct)

@@ -67,7 +67,17 @@ public enum TripState
     Requested = 1,
     DriverArrived = 2,
     Started = 3,
-    Arrived = 4,
-    Ended = 5,
-    Canceled = 6
+    AtStop1 = 10,
+    AfterStop1 = 11,
+    AtStop2 = 12,
+    AfterStop2 = 13,
+    AtStop3 = 14,
+    AfterStop3 = 15,
+    AtStop4 = 16,
+    AfterStop4 = 17,
+    AtStop5 = 18,
+    AfterStop5 = 19,
+    Arrived = 20,
+    Ended = 21,
+    Canceled = 100
 }

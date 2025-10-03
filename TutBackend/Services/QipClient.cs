@@ -50,6 +50,20 @@ namespace TutBackend.Services;
 
         public async Task<ValidateResponse> ValidateAsync(ValidateRequest request, CancellationToken cancellationToken = default)
         {
+            // Shortcut validation for development
+            if (string.IsNullOrEmpty(request.Token))
+                return new ValidateResponse
+                {
+                    IsValid = false
+                };
+            string username = request.Token[7..];
+            return new ValidateResponse
+            {
+                IsValid = true,
+                Username = username
+            };
+            
+            
             if (request is null) throw new ArgumentNullException(nameof(request));
             var resp = await _http.PostAsJsonAsync("/validate", request, cancellationToken).ConfigureAwait(false);
             resp.EnsureSuccessStatusCode();
