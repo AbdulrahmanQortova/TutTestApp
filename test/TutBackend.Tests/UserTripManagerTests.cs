@@ -75,7 +75,7 @@ public class UserTripManagerTests
     {
         // Create a simple channel factory that returns a harmless channel; we'll replace the service instance via reflection
         var factory = new TestGrpcChannelFactory();
-        var mgr = new UserTripManager(factory);
+        var mgr = new UserTripManager("test-token", factory);
         var fi = typeof(UserTripManager).GetField("_userTrip_service", BindingFlags.Instance | BindingFlags.NonPublic);
         if (fi is null) fi = typeof(UserTripManager).GetField("_userTripService", BindingFlags.Instance | BindingFlags.NonPublic)!;
         fi.SetValue(mgr, fake);

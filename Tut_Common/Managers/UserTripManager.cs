@@ -4,6 +4,7 @@ using System.Threading.Channels;
 using Tut.Common.GServices;
 using Tut.Common.Models;
 using Grpc.Core;
+using ProtoBuf.Grpc;
 
 namespace Tut.Common.Managers;
 
@@ -17,6 +18,8 @@ public class UserTripManager
     private readonly Lock _stateLock = new();
     private ConnectionState _connectionState = ConnectionState.Disconnected;
     private Trip? _currentTrip;
+
+    private readonly CallOptions _callOptions; // added: store call options with metadata
 
     // Public read-only accessors
     public ConnectionState CurrentState
@@ -42,17 +45,21 @@ public class UserTripManager
     public event EventHandler<StatusUpdateEventArgs>? StatusChanged;
     public event EventHandler<ErrorReceivedEventArgs>? ErrorReceived; 
     public event EventHandler<NotificationReceivedEventArgs>? NotificationReceived;
-    public event EventHandler<DriverLocationsReceivedEventARg>? DriverLocationsReceived; 
+    public event EventHandler<DriverLocationsReceivedEventArgs>? DriverLocationsReceived; 
     public event EventHandler<ConnectionStateChangedEventArgs>? ConnectionStateChanged;
 
     public UserTripManager(
+        string token,
         IGrpcChannelFactory channelFactory
         )
     {
         GrpcChannel grpcChannel = channelFactory.GetChannel();
         _userTripService = grpcChannel.CreateGrpcService<IGUserTripService>();
-        
 
+        // Populate CallOptions with Authorization header (Bearer {token}) similar to DriverTripManager
+        Metadata metadata = [];
+        metadata.Add("Authorization", $"Bearer {token}");
+        _callOptions = new CallOptions(metadata);
     }
 
 
@@ -90,7 +97,8 @@ public class UserTripManager
                     {
                         // Create a fresh request enumerable for each connect attempt
                         var requestStream = _requestChannel!.Reader.ReadAllAsync(linkedToken);
-                        var responseStream = _userTripService.Connect(requestStream);
+                        // Pass call options via CallContext so Authorization metadata is sent
+                        var responseStream = _userTripService.Connect(requestStream, new CallContext(_callOptions));
 
                         // We successfully established a connection: reset attempt counter
                         attempt = 0;
@@ -114,7 +122,7 @@ public class UserTripManager
                                     NotificationReceived?.Invoke(this, new NotificationReceivedEventArgs { NotificationText = packet.NotificationText });
                                     break;
                                 case UserTripPacketType.DriverLocationUpdate:
-                                    DriverLocationsReceived?.Invoke(this, new DriverLocationsReceivedEventARg { Locations = packet.DriverLocations });
+                                    DriverLocationsReceived?.Invoke(this, new DriverLocationsReceivedEventArgs { Locations = packet.DriverLocations });
                                     break;
                             }
                         }
@@ -299,9 +307,9 @@ public class NotificationReceivedEventArgs : EventArgs
 {
     public string NotificationText { get; set; } = string.Empty;
 }
-public class DriverLocationsReceivedEventARg : EventArgs
+public class DriverLocationsReceivedEventArgs : EventArgs
 {
-    public List<GLocation> Locations { get; set; } = new();
+    public List<GLocation> Locations { get; set; } = [];
 }
 
 public class ConnectionStateChangedEventArgs : EventArgs
