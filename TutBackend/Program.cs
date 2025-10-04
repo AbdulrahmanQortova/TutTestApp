@@ -32,6 +32,12 @@ public static class Program
         builder.Services.AddScoped<IDriverLocationRepository, DriverLocationRepository>();
         builder.Services.AddScoped<QipClient>();
 
+        // Register DriverSelector for injecting into TripDistributor
+        builder.Services.AddSingleton<DriverSelector>();
+
+        // Register TripDistributor as a hosted background service
+        builder.Services.AddHostedService<TripDistributor>();
+
         // Read Qip base address from configuration in a null-safe way
         var qipBaseAddress = builder.Configuration.GetValue<string>("Qip:BaseAddress");
         if (string.IsNullOrWhiteSpace(qipBaseAddress))

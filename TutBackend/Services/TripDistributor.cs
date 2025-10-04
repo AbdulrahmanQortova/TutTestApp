@@ -1,16 +1,24 @@
-using Tut.Common.Models;
-using Tut.Common.Utils;
 using TutBackend.Repositories;
+
 namespace TutBackend.Services;
 
-public class TripDistributor (
-    ITripRepository tripRepository,
-    IDriverLocationRepository driverLocationRepository,
-    IDriverRepository driverRepository,
-    ILogger<TripDistributor> logger
-    )
+public class TripDistributor : BackgroundService
 {
+    private readonly IServiceProvider _services;
+    private readonly ILogger<TripDistributor> _logger;
+    private readonly DriverSelector _driverSelector;
 
+    public TripDistributor(IServiceProvider services, ILogger<TripDistributor> logger, DriverSelector driverSelector)
+    {
+        _services = services ?? throw new ArgumentNullException(nameof(services));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _driverSelector = driverSelector ?? throw new ArgumentNullException(nameof(driverSelector));
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        await DistributionLoop(stoppingToken).ConfigureAwait(false);
+    }
 
     private async Task DistributionLoop(CancellationToken cancellationToken)
     {
@@ -18,35 +26,40 @@ public class TripDistributor (
         {
             try
             {
+                using var scope = _services.CreateScope();
+                var tripRepository = scope.ServiceProvider.GetRequiredService<ITripRepository>();
+                var driverLocationRepository = scope.ServiceProvider.GetRequiredService<IDriverLocationRepository>();
+                var driverRepository = scope.ServiceProvider.GetRequiredService<IDriverRepository>();
+
                 // Fetch a single unassigned trip directly from the repository.
                 var trip = await tripRepository.GetOneUnassignedTripAsync();
 
                 if (trip is null)
                 {
                     // Nothing to do right now - wait and retry
-                    await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+                    await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken).ConfigureAwait(false);
                     continue;
                 }
 
-                logger.LogInformation("Found unassigned trip {TripId}, finding best driver...", trip.Id);
+                _logger.LogInformation("Found unassigned trip {TripId}, finding best driver...", trip.Id);
 
-                // Find the best driver (no exclusions for now)
-                var bestDriver = await FindBestDriver(trip, []);
+                // Use the injected DriverSelector to pick the best driver
+                var bestDriver = await _driverSelector.FindBestDriverAsync(trip, Array.Empty<int>(), driverLocationRepository, driverRepository).ConfigureAwait(false);
                 if (bestDriver is null)
                 {
-                    logger.LogInformation("No suitable driver found for trip {TripId}", trip.Id);
+                    _logger.LogInformation("No suitable driver found for trip {TripId}", trip.Id);
                     // Wait a bit before retrying so we don't tight-loop on the same trip
-                    await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+                    await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken).ConfigureAwait(false);
                     continue;
                 }
 
                 // Assign driver and persist
                 trip.Driver = bestDriver;
-                await tripRepository.UpdateAsync(trip);
-                logger.LogInformation("Assigned driver {DriverId} to trip {TripId}", bestDriver.Id, trip.Id);
+                await tripRepository.UpdateAsync(trip).ConfigureAwait(false);
+                _logger.LogInformation("Assigned driver {DriverId} to trip {TripId}", bestDriver.Id, trip.Id);
 
                 // Small delay before processing next trip to avoid DB hot loop
-                await Task.Delay(TimeSpan.FromMilliseconds(200), cancellationToken);
+                await Task.Delay(TimeSpan.FromMilliseconds(200), cancellationToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -55,11 +68,11 @@ public class TripDistributor (
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Error in DistributionLoop");
+                _logger.LogError(ex, "Error in DistributionLoop");
                 // Backoff on error
                 try
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+                    await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
@@ -68,90 +81,4 @@ public class TripDistributor (
             }
         }
     }
-
-    private async Task<Driver?> FindBestDriver(Trip trip, int[] excludedIds)
-    {
-        GLocation? pickup = trip.Stops[0].Place?.Location;
-        if (pickup is null)
-        {
-            logger.LogError("Found a Trip without a Pickup:\n {Trip}", trip.ToJson());
-            return null;
-        }
-
-        // Get latest known driver locations
-        var locations = await driverLocationRepository.GetLatestDriverLocations();
-        if (locations.Count == 0)
-        {
-            logger.LogWarning("No driver locations available when finding best driver for trip {TripId}", trip.Id);
-            return null;
-        }
-
-        // Prepare excluded set for fast lookups
-        var excludedSet = new HashSet<int>(excludedIds);
-
-        // Build candidate id list from locations, excluding excluded ids
-        var candidateIds = locations
-            .Select(l => l.DriverId)
-            .Where(id => !excludedSet.Contains(id))
-            .Distinct()
-            .ToList();
-
-        if (candidateIds.Count == 0)
-        {
-            logger.LogInformation("No candidate drivers after applying excluded ids for trip {TripId}", trip.Id);
-            return null;
-        }
-
-        // Fetch drivers in one DB call
-        var drivers = await driverRepository.GetByIdsAsync(candidateIds);
-        var driverMap = drivers.ToDictionary(d => d.Id);
-
-        Driver? bestDriver = null;
-        double bestCost = double.PositiveInfinity;
-
-        foreach (var loc in locations)
-        {
-            // Skip excluded drivers
-            if (excludedSet.Contains(loc.DriverId))
-                continue;
-
-            // Try get driver from the batch result
-            if (!driverMap.TryGetValue(loc.DriverId, out var driver))
-            {
-                logger.LogDebug("No driver record found for driverId {DriverId}", loc.DriverId);
-                continue;
-            }
-
-            // Only consider available drivers
-            if (driver.State != DriverState.Available)
-                continue;
-
-            // Compute cost using driver's reported location (from the location repository)
-            var driverLocation = loc.Location;
-            double cost;
-            try
-            {
-                cost = _costFunction(pickup, driverLocation);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error computing cost for driver {DriverId}", driver.Id);
-                continue;
-            }
-
-            if (cost >= bestCost) continue;
-            bestCost = cost;
-            bestDriver = driver;
-        }
-
-        if (bestDriver is null)
-            logger.LogInformation("No available drivers found for trip {TripId}", trip.Id);
-
-        return bestDriver;
-    }
-
-    private readonly Func<GLocation, GLocation, double> _costFunction = CartesianDistance;
-
-
-    private static readonly Func<GLocation, GLocation, double> CartesianDistance = LocationUtils.DistanceInMeters;
 }
