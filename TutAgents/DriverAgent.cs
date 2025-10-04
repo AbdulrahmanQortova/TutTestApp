@@ -1,193 +1,309 @@
-using Grpc.Core;
-using Grpc.Net.Client;
-using ProtoBuf.Grpc;
 using ProtoBuf.Grpc.Client;
-using System.Threading.Channels;
 using Tut.Common.GServices;
 using Tut.Common.Models;
 using Tut.Common.Utils;
-using System.Threading;
 using Tut.Common.Managers;
+
 namespace Tut.Agents;
 
 public class DriverAgent
 {
-    private readonly string _username;
-    private readonly string _password;
     private readonly Options _options;
-    private GLocation _currentLocation;
+    private readonly GLocation _currentLocation;
     private CancellationTokenSource _runCts = new();
-    
+
     private readonly DriverLocationManagerService _locationManager;
     private readonly DriverTripManager _tripManager;
-    
+
+    // Hold background tasks so the compiler does not warn about unobserved tasks.
+    private Task? _locationConnectTask;
+    private Task? _tripConnectTask;
+    private Task? _punchInTask;
+
+    // Map trip state to handler to reduce method complexity
+    private readonly IReadOnlyDictionary<TripState, Func<Trip, CancellationToken, Task>> _stateHandlers;
+
     public DriverAgent(string username, string password) : this(username, password, new Options()) { }
     public DriverAgent(string username, string password, Options options)
     {
-        _username = username;
-        _password = password;
         _options = options;
         GrpcClientFactory.AllowUnencryptedHttp2 = true;
         GrpcChannelFactory factory = new GrpcChannelFactory("http://localhost:5040");
         _currentLocation = RandomLocationInside(options.WanderBottomLeft, options.WanderTopRight);
         _locationManager = new DriverLocationManagerService(username, factory);
         _tripManager = new DriverTripManager(username, factory);
+
+        // use password in a no-op to avoid "parameter is never used" warnings without logging sensitive data
+        _ = password.Length;
+
+        // Initialize state handlers
+        var handlers = new Dictionary<TripState, Func<Trip, CancellationToken, Task>>
+        {
+            { TripState.Accepted, async (t, ct) => await HandleAcceptedAsync(t, ct).ConfigureAwait(false) },
+            { TripState.DriverArrived, async (t, ct) => await HandleDriverArrivedAsync(t, ct).ConfigureAwait(false) },
+            { TripState.AtStop1, async (_, ct) => await HandleAtStopsAsync(ct).ConfigureAwait(false) },
+            { TripState.AtStop2, async (_, ct) => await HandleAtStopsAsync(ct).ConfigureAwait(false) },
+            { TripState.AtStop3, async (_, ct) => await HandleAtStopsAsync(ct).ConfigureAwait(false) },
+            { TripState.AtStop4, async (_, ct) => await HandleAtStopsAsync(ct).ConfigureAwait(false) },
+            { TripState.AtStop5, async (_, ct) => await HandleAtStopsAsync(ct).ConfigureAwait(false) },
+            { TripState.AfterStop1, async (t, ct) => await HandleMoveAndMaybeStopAsync(t, 2, 3, ct).ConfigureAwait(false) },
+            { TripState.AfterStop2, async (t, ct) => await HandleMoveAndMaybeStopAsync(t, 3, 4, ct).ConfigureAwait(false) },
+            { TripState.AfterStop3, async (t, ct) => await HandleMoveAndMaybeStopAsync(t, 4, 5, ct).ConfigureAwait(false) },
+            { TripState.AfterStop4, async (t, ct) => await HandleMoveAndMaybeStopAsync(t, 5, 6, ct).ConfigureAwait(false) },
+            { TripState.AfterStop5, async (t, ct) => { await SafeMoveToIndexAsync(t, 6, ct).ConfigureAwait(false); if (!ct.IsCancellationRequested) await _tripManager.SendArrivedAtDestinationAsync(ct).ConfigureAwait(false); } },
+            { TripState.Arrived, async (t, ct) => await HandleArrivedAsync(t, ct).ConfigureAwait(false) }
+        };
+
+        _stateHandlers = handlers;
     }
 
 
     public void Start()
     {
         _runCts = new CancellationTokenSource();
-        _locationManager.ErrorReceived += (s, e) => Console.WriteLine("LM> " + e.ErrorText);
-        _tripManager.ErrorReceived += (s, e) => Console.WriteLine("TM> " + e.ErrorText);
-        _tripManager.ConnectionStateChanged += (s, e) => Console.WriteLine("TM> " + e.NewState);
-        _tripManager.OfferReceived += async (s, e) =>
+        _locationManager.ErrorReceived += (_, e) => Console.WriteLine("LM> " + e.ErrorText);
+        _tripManager.ErrorReceived += (_, e) => Console.WriteLine("TM> " + e.ErrorText);
+        _tripManager.ConnectionStateChanged += (_, e) => Console.WriteLine("TM> " + e.NewState);
+
+        // Offer handling: cancel wandering, acknowledge and accept the offer.
+        _tripManager.OfferReceived += (_, _) => _ = HandleOfferAsync();
+
+        // Invoke status updates as fire-and-forget. Use async void event handler to avoid discard assignment.
+        _tripManager.StatusChanged += async (_, e) => await HandleStatusUpdate(e.Trip).ConfigureAwait(false);
+
+        // Start background connection tasks and keep references so they are not unobserved.
+        _locationConnectTask = _locationManager.Connect(_runCts.Token, TimeSpan.FromSeconds(2))
+            .ContinueWith(t =>
+            {
+                if (t.IsFaulted)
+                {
+                    Console.WriteLine("Location connect failed: " + t.Exception?.GetBaseException().Message);
+                }
+            }, TaskContinuationOptions.ExecuteSynchronously);
+
+        _tripConnectTask = _tripManager.Connect(_runCts.Token)
+            .ContinueWith(t =>
+            {
+                if (t.IsFaulted)
+                {
+                    Console.WriteLine("Trip connect failed: " + t.Exception?.GetBaseException().Message);
+                }
+            }, TaskContinuationOptions.ExecuteSynchronously);
+
+        _punchInTask = _tripManager.SendPunchInAsync(_runCts.Token)
+            .ContinueWith(t =>
+            {
+                if (t.IsFaulted)
+                {
+                    Console.WriteLine("Punch-in failed: " + t.Exception?.GetBaseException().Message);
+                }
+            }, TaskContinuationOptions.ExecuteSynchronously);
+    }
+
+    private async Task HandleOfferAsync()
+    {
+        try
         {
             if (_wanderCts is not null)
             {
-                await _wanderCts.CancelAsync();
-                _wanderCts.Dispose();
+                try
+                {
+                    await _wanderCts.CancelAsync().ConfigureAwait(false);
+                }
+                catch (ObjectDisposedException)
+                {
+                    // ignore - it was disposed concurrently
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Wander cancel error: " + ex.Message);
+                }
+
+                try
+                {
+                    _wanderCts.Dispose();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Wander dispose error: " + ex.Message);
+                }
                 _wanderCts = null;
             }
-            await _tripManager.SendTripReceivedAsync();
-            await Task.Delay(2000);
-            await _tripManager.SendAcceptTripAsync();
-        };
-        _tripManager.StatusChanged += async (s, e) => await HandleStatusUpdate(e.Trip);
-        _ = _locationManager.Connect(_runCts.Token, TimeSpan.FromSeconds(2));
-        _ = _tripManager.Connect(_runCts.Token);
-        _ = _tripManager.SendPunchInAsync(_runCts.Token);
+
+            await _tripManager.SendTripReceivedAsync().ConfigureAwait(false);
+            await Task.Delay(2000).ConfigureAwait(false);
+            await _tripManager.SendAcceptTripAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Offer handling error: " + ex.Message);
+        }
     }
 
-    private int _lastStop;
     private async Task HandleStatusUpdate(Trip? trip)
     {
-        CancellationTokenSource onTripMovementCancellation = new();
+        // Link the on-trip CTS to the global run CTS so Stop() cancels any movement.
+        using var onTripMovementCancellation = CancellationTokenSource.CreateLinkedTokenSource(_runCts.Token);
+        CancellationToken ct = onTripMovementCancellation.Token;
+
         if (trip is null)
         {
-            if (_wanderCts is null)
+            if (_wanderCts is null && !ct.IsCancellationRequested)
             {
                 _wanderCts = new CancellationTokenSource();
                 _ = WanderLoop(_wanderCts.Token);
             }
             return;
         }
-        switch (trip.Status)
+
+        // Delegate the detailed status processing to keep this method simple.
+        await ProcessTripStatusAsync(trip, ct).ConfigureAwait(false);
+    }
+
+    private async Task ProcessTripStatusAsync(Trip trip, CancellationToken ct)
+    {
+        try
         {
-            case TripState.Accepted:
-                await MoveTo(trip.Stops[0].Place.Location, onTripMovementCancellation.Token);
-                if(!onTripMovementCancellation.IsCancellationRequested)
-                    await _tripManager.SendArrivedAtPickupAsync(onTripMovementCancellation.Token);
-                break;
-            case TripState.DriverArrived:
-                await Task.Delay(TimeSpan.FromSeconds(_options.ArrivalWaitTimeSeconds), onTripMovementCancellation.Token);
-                if (!onTripMovementCancellation.IsCancellationRequested)
-                    await MoveTo(trip.Stops[1].Place.Location, onTripMovementCancellation.Token);
-                if (!onTripMovementCancellation.IsCancellationRequested)
-                {
-                    if (trip.Stops.Count > 2)
-                        await _tripManager.SendArrivedAtStopAsync(onTripMovementCancellation.Token);
-                    else
-                        await _tripManager.SendArrivedAtDestinationAsync(onTripMovementCancellation.Token);
-                }
-                break;
-            case TripState.AtStop1:
-            case TripState.AtStop2:
-            case TripState.AtStop3:
-            case TripState.AtStop4:
-            case TripState.AtStop5:
-                await Task.Delay(TimeSpan.FromSeconds(_options.StopWaitTimeSeconds), onTripMovementCancellation.Token);
-                if (!onTripMovementCancellation.IsCancellationRequested)
-                    await _tripManager.SendContinueTripAsync(onTripMovementCancellation.Token);
-                break;
-            case TripState.AfterStop1:
-                if (!onTripMovementCancellation.IsCancellationRequested)
-                    await MoveTo(trip.Stops[2].Place.Location, onTripMovementCancellation.Token);
-                if (!onTripMovementCancellation.IsCancellationRequested)
-                {
-                    if (trip.Stops.Count > 3)
-                        await _tripManager.SendArrivedAtStopAsync(onTripMovementCancellation.Token);
-                    else
-                        await _tripManager.SendArrivedAtDestinationAsync(onTripMovementCancellation.Token);
-                }
-                break;
-            case TripState.AfterStop2:
-                if (!onTripMovementCancellation.IsCancellationRequested)
-                    await MoveTo(trip.Stops[3].Place.Location, onTripMovementCancellation.Token);
-                if (!onTripMovementCancellation.IsCancellationRequested)
-                {
-                    if (trip.Stops.Count > 4)
-                        await _tripManager.SendArrivedAtStopAsync(onTripMovementCancellation.Token);
-                    else
-                        await _tripManager.SendArrivedAtDestinationAsync(onTripMovementCancellation.Token);
-                }
-                break;
-            case TripState.AfterStop3:
-                if (!onTripMovementCancellation.IsCancellationRequested)
-                    await MoveTo(trip.Stops[4].Place.Location, onTripMovementCancellation.Token);
-                if (!onTripMovementCancellation.IsCancellationRequested)
-                {
-                    if (trip.Stops.Count > 5)
-                        await _tripManager.SendArrivedAtStopAsync(onTripMovementCancellation.Token);
-                    else
-                        await _tripManager.SendArrivedAtDestinationAsync(onTripMovementCancellation.Token);
-                }
-                break;
-            case TripState.AfterStop4:
-                if (!onTripMovementCancellation.IsCancellationRequested)
-                    await MoveTo(trip.Stops[5].Place.Location, onTripMovementCancellation.Token);
-                if (!onTripMovementCancellation.IsCancellationRequested)
-                {
-                    if (trip.Stops.Count > 6)
-                        await _tripManager.SendArrivedAtStopAsync(onTripMovementCancellation.Token);
-                    else
-                        await _tripManager.SendArrivedAtDestinationAsync(onTripMovementCancellation.Token);
-                }
-                break;
-            case TripState.AfterStop5:
-                if (!onTripMovementCancellation.IsCancellationRequested)
-                    await MoveTo(trip.Stops[6].Place.Location, onTripMovementCancellation.Token);
-                if (!onTripMovementCancellation.IsCancellationRequested)
-                    await _tripManager.SendArrivedAtDestinationAsync(onTripMovementCancellation.Token);
-                break;
-            case TripState.Arrived:
-                if (!onTripMovementCancellation.IsCancellationRequested)
-                    await Task.Delay(TimeSpan.FromMicroseconds(_options.PaymentWaitTimeSeconds), onTripMovementCancellation.Token);
-                if (!onTripMovementCancellation.IsCancellationRequested)
-                    await _tripManager.SendCashPaymentMadeAsync((int)trip.ActualCost, onTripMovementCancellation.Token);
-                break;
+            if (_stateHandlers.TryGetValue(trip.Status, out var handler))
+            {
+                await handler(trip, ct).ConfigureAwait(false);
+            }
         }
+        catch (OperationCanceledException)
+        {
+            // Movement was cancelled — expected when trip changes or Stop() called.
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("ProcessTripStatusAsync error: " + ex.Message);
+        }
+    }
+
+    // Extracted helpers
+    private Task SafeMoveToIndexAsync(Trip trip, int index, CancellationToken ct)
+    {
+        if (index < 0 || trip.Stops.Count <= index)
+            return Task.CompletedTask;
+        var loc = trip.Stops[index].Place?.Location;
+        if (loc is null) return Task.CompletedTask;
+        return MoveTo(loc, ct);
+    }
+
+    private Task SendArriveOrStopAsync(Trip trip, int minStopsForStop, CancellationToken ct)
+    {
+        return (trip.Stops.Count > minStopsForStop)
+            ? _tripManager.SendArrivedAtStopAsync(ct)
+            : _tripManager.SendArrivedAtDestinationAsync(ct);
+    }
+
+    private async Task HandleMoveAndMaybeStopAsync(Trip trip, int moveIndex, int minStopsForStop, CancellationToken ct)
+    {
+        await SafeMoveToIndexAsync(trip, moveIndex, ct).ConfigureAwait(false);
+        if (!ct.IsCancellationRequested)
+            await SendArriveOrStopAsync(trip, minStopsForStop, ct).ConfigureAwait(false);
+    }
+
+    private async Task HandleAcceptedAsync(Trip trip, CancellationToken ct)
+    {
+        await SafeMoveToIndexAsync(trip, 0, ct).ConfigureAwait(false);
+        if (!ct.IsCancellationRequested)
+            await _tripManager.SendArrivedAtPickupAsync(ct).ConfigureAwait(false);
+    }
+
+    private async Task HandleDriverArrivedAsync(Trip trip, CancellationToken ct)
+    {
+        await Task.Delay(TimeSpan.FromSeconds(_options.ArrivalWaitTimeSeconds), ct).ConfigureAwait(false);
+        if (!ct.IsCancellationRequested)
+            await SafeMoveToIndexAsync(trip, 1, ct).ConfigureAwait(false);
+        if (!ct.IsCancellationRequested)
+            await SendArriveOrStopAsync(trip, 2, ct).ConfigureAwait(false);
+    }
+
+    private async Task HandleAtStopsAsync(CancellationToken ct)
+    {
+        await Task.Delay(TimeSpan.FromSeconds(_options.StopWaitTimeSeconds), ct).ConfigureAwait(false);
+        if (!ct.IsCancellationRequested)
+            await _tripManager.SendContinueTripAsync(ct).ConfigureAwait(false);
+    }
+
+    private async Task HandleArrivedAsync(Trip trip, CancellationToken ct)
+    {
+        if (!ct.IsCancellationRequested)
+            await Task.Delay(TimeSpan.FromSeconds(_options.PaymentWaitTimeSeconds), ct).ConfigureAwait(false);
+        if (!ct.IsCancellationRequested)
+            await _tripManager.SendCashPaymentMadeAsync((int)trip.ActualCost, ct).ConfigureAwait(false);
     }
 
     public void Stop()
     {
         _ = _locationManager.Disconnect();
-        _runCts.Cancel();
+        _ = _tripManager.Disconnect();
+        try
+        {
+            _runCts.Cancel();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Run cancellation error: " + ex.Message);
+        }
         _runCts.Dispose();
+        _runCts = new CancellationTokenSource();
+
+        // Observe background task exceptions to avoid unobserved task warnings.
+        _locationConnectTask?.ContinueWith(t => { var _ = t.Exception; }, TaskContinuationOptions.OnlyOnFaulted);
+        _tripConnectTask?.ContinueWith(t => { var _ = t.Exception; }, TaskContinuationOptions.OnlyOnFaulted);
+        _punchInTask?.ContinueWith(t => { var _ = t.Exception; }, TaskContinuationOptions.OnlyOnFaulted);
     }
 
     private CancellationTokenSource? _wanderCts;
 
-    private async Task NotifyLocationChanged()
+    private Task NotifyLocationChanged()
     {
-        _locationManager.RegisterLocation(_currentLocation);
+        // RegisterLocation is synchronous in the manager; return a completed task so callers may await.
+        try
+        {
+            _locationManager.RegisterLocation(_currentLocation);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("NotifyLocationChanged error: " + ex.Message);
+        }
+        return Task.CompletedTask;
     }
-    
+
     private async Task WanderLoop(CancellationToken ct)
     {
-        while (!ct.IsCancellationRequested)
+        try
         {
-            GLocation destLocation = RandomLocationInside(_options.WanderBottomLeft, _options.WanderTopRight);
-            await MoveTo(destLocation, ct);
+            while (!ct.IsCancellationRequested)
+            {
+                GLocation destLocation = RandomLocationInside(_options.WanderBottomLeft, _options.WanderTopRight);
+                await MoveTo(destLocation, ct).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // expected
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("WanderLoop error: " + ex.Message);
         }
     }
 
 
     private async Task MoveTo(GLocation destLocation, CancellationToken ct)
     {
-        while (!ct.IsCancellationRequested && !LocationUtils.SameLocation(_currentLocation, destLocation))
+        try
         {
-            await StepTowards(destLocation, _options.Speed, ct);
+            while (!ct.IsCancellationRequested && !LocationUtils.SameLocation(_currentLocation, destLocation))
+            {
+                await StepTowards(destLocation, _options.Speed, ct).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // expected
         }
     }
 
@@ -214,10 +330,10 @@ public class DriverAgent
         _currentLocation.Speed = speed;
         _currentLocation.Timestamp = DateTime.UtcNow;
 
-        await NotifyLocationChanged();
-        
+        await NotifyLocationChanged().ConfigureAwait(false);
+
         // Simulate the passage of 5 seconds for this step
-        await Task.Delay(TimeSpan.FromSeconds(5), ct);
+        await Task.Delay(TimeSpan.FromSeconds(5), ct).ConfigureAwait(false);
     }
 
 
@@ -248,7 +364,7 @@ public class DriverAgent
             Timestamp = DateTime.UtcNow
         };
     }
-    
+
     public class Options
     {
         public int ArrivalWaitTimeSeconds { get; set; } = 20;
@@ -259,3 +375,5 @@ public class DriverAgent
         public readonly GLocation WanderTopRight = new GLocation { Latitude = 30.15, Longitude = 31.5 };
     }
 }
+
+#pragma warning restore IDE0005 // restore analyzer

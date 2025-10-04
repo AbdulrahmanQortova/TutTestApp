@@ -152,14 +152,16 @@ public class GUserTripService(
                     return await HandleCancelTripAsync(packet);
                 default:
                     // Unknown packet
-                    logger.LogError("Unknown Packet Type:\n{Packet}", packet.ToJson());
+                    logger.LogError("Unknown Packet Type: {Packet}", packet.ToJson());
                     return UserTripPacket.Error("Unknown packet type");
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            Console.WriteLine("Error while processing user packets");
+            Console.WriteLine(ex.StackTrace);
             // If processing a single packet fails, send an Error packet back
-            return UserTripPacket.Error("Error while processing driver packets");
+            return UserTripPacket.Error("Error while processing user packets");
         }
     }
 }

@@ -28,10 +28,10 @@ public class UserAgent
         _runCts = new CancellationTokenSource();
         var token = _runCts.Token;
 
-        _tripManager.ErrorReceived += (_, e) => Console.WriteLine($"UM> Error: {e.ErrorText}");
-        _tripManager.NotificationReceived += (_, e) => Console.WriteLine($"UM> Notification: {e.NotificationText}");
-        _tripManager.DriverLocationsReceived += (_, e) => Console.WriteLine($"UM> Driver locations: {e.Locations.Count}");
-        _tripManager.ConnectionStateChanged += (_, e) => Console.WriteLine($"UM> Connection state: {e.NewState}");
+        _tripManager.ErrorReceived += (_, e) => Console.WriteLine($"UA> Error: {e.ErrorText}");
+        _tripManager.NotificationReceived += (_, e) => Console.WriteLine($"UA> Notification: {e.NotificationText}");
+        _tripManager.DriverLocationsReceived += (_, e) => Console.WriteLine($"UA> Driver locations: {e.Locations.Count}");
+        _tripManager.ConnectionStateChanged += (_, e) => Console.WriteLine($"UA> Connection state: {e.NewState}");
         _tripManager.StatusChanged += (_, e) => HandleStatusChanged(e.Trip);
 
         // Connect and start loop
@@ -43,14 +43,14 @@ public class UserAgent
     {
         if (trip is null)
         {
-            Console.WriteLine("UM> No active trip");
+            Console.WriteLine("UA> No active trip");
             return;
         }
 
-        Console.WriteLine($"UM> Status changed: TripId={trip.Id} State={trip.Status}");
+        Console.WriteLine($"UA> Status changed: TripId={trip.Id} State={trip.Status}");
         if (trip.Status == TripState.Ended || trip.Status == TripState.Canceled)
         {
-            Console.WriteLine($"UM> Trip {trip.Id} ended with status {trip.Status}");
+            Console.WriteLine($"UA> Trip {trip.Id} ended with status {trip.Status}");
         }
     }
 
@@ -66,7 +66,7 @@ public class UserAgent
         var rng = Random.Shared;
         while (!token.IsCancellationRequested)
         {
-            int delaySec = rng.Next(1, 31); // 1-30 seconds
+            int delaySec = rng.Next(10, 31); // 1-30 seconds
             Console.WriteLine($"UA> Waiting {delaySec}s before requesting a trip...");
             try
             {
@@ -122,9 +122,11 @@ public class UserAgent
             try
             {
                 await waitTask.WaitAsync(ctr.Token);
+                Console.WriteLine("After waitTask");
             }
             catch (OperationCanceledException)
             {
+                Console.WriteLine("... Cancelled");
                 // cancel waiting
             }
             finally
@@ -164,8 +166,7 @@ public class UserAgent
 
         var trip = new Trip
         {
-            Id = Math.Abs(Guid.NewGuid().GetHashCode()),
-            User = new User { Id = Math.Abs(Guid.NewGuid().GetHashCode()), FirstName = _username, LastName = "Agent" },
+            User = new User { Id = 1, Mobile = _username, FirstName = "Ualed", LastName = "Uawas" },
             Stops = stops,
             Status = TripState.Requested
         };

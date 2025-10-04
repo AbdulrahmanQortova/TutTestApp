@@ -57,7 +57,7 @@ public class Trip
     [ProtoMember(20)]
     public string Route { get; set; } = string.Empty;
     
-    [ProtoMember(9)]
+    [ProtoMember(21)]
     public DateTime DriverArrivalTime { get; set; } = DateTime.MinValue;
 
     public bool IsActive => Status is not (TripState.Unspecified or TripState.Ended or TripState.Canceled);
