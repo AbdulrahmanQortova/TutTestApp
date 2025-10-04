@@ -13,7 +13,28 @@ public class DriverTripPacket
     [ProtoMember(4)]
     public int DistanceTravelledSoFar { get; set; }
     [ProtoMember(5)]
+    public int PaymentAmount { get; set; }
+    [ProtoMember(6)]
     public DateTime? Timestamp { get; set; } = DateTime.UtcNow;
+
+
+    public static DriverTripPacket Error(string errorText)
+    {
+        return new DriverTripPacket
+        {
+            Type = DriverTripPacketType.Error,
+            ErrorText = errorText
+        };
+    }
+
+    public static DriverTripPacket StatusUpdate(Trip? trip)
+    {
+        return new DriverTripPacket
+        {
+            Type = DriverTripPacketType.StatusUpdate,
+            Trip = trip
+        };
+    }
 }
 
 

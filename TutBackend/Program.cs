@@ -51,6 +51,7 @@ public static class Program
         app.MapGrpcService<GDriverManagerService>();
         app.MapGrpcService<GDriverLocationService>();
         app.MapGrpcService<GTripManagerService>();
+        app.MapGrpcService<GDriverTripService>();
         app.Run();
     }
 }

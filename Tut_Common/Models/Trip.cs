@@ -57,16 +57,19 @@ public class Trip
     [ProtoMember(20)]
     public string Route { get; set; } = string.Empty;
     
-    
-    public bool IsActive => Status is TripState.Requested or TripState.DriverArrived or TripState.Started or TripState.Arrived;
+    [ProtoMember(9)]
+    public DateTime DriverArrivalTime { get; set; } = DateTime.MinValue;
+
+    public bool IsActive => Status is not (TripState.Unspecified or TripState.Ended or TripState.Canceled);
     
 }
 public enum TripState
 {
     Unspecified = 0,
     Requested = 1,
-    DriverArrived = 2,
-    Started = 3,
+    Accepted = 2,
+    DriverArrived = 3,
+    Started = 4,
     AtStop1 = 10,
     AfterStop1 = 11,
     AtStop2 = 12,
