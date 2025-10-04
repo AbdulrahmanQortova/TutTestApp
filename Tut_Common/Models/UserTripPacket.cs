@@ -16,6 +16,25 @@ public class UserTripPacket
     public List<GLocation> DriverLocations { get; set; } = [];
     [ProtoMember(6)]
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+
+
+    public static UserTripPacket Error(string errorText)
+    {
+        return new UserTripPacket
+        {
+            Type = UserTripPacketType.Error,
+            ErrorText = errorText
+        };
+    }
+
+    public static UserTripPacket StatusUpdate(Trip? trip)
+    {
+        return new UserTripPacket
+        {
+            Type = UserTripPacketType.StatusUpdate,
+            Trip = trip
+        };
+    }
 }
 
 

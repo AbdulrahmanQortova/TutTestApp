@@ -32,6 +32,10 @@ public class GDriverTripService(
             FullMode = BoundedChannelFullMode.DropOldest
         });
 
+        
+        Trip? trip = await tripRepository.GetActiveTripForDriver(driver.Id);
+        await _responseChannel.Writer.WriteAsync(DriverTripPacket.StatusUpdate(trip));
+
         // Background task: consume incoming request packets and act on them.
         _ = Task.Run(async () =>
         {
@@ -65,7 +69,8 @@ public class GDriverTripService(
             {
                 while (reader.TryRead(out var outPacket))
                 {
-                    yield return outPacket;
+                    if(outPacket.Type != DriverTripPacketType.Unspecified)
+                        yield return outPacket;
                 }
             }
         }

@@ -30,6 +30,9 @@ public class User
     public List<SavedPlace>? SavedPlaces { get; set; }
     [ProtoMember(12)]
     public List<Trip>? Trips { get; set; }
+    
+    
+    public string FullName {get => FirstName + " " + LastName; }
 
 }
 
