@@ -130,7 +130,7 @@ public class DriverAgent
                 _wanderCts = null;
             }
 
-            await _tripManager.SendTripReceivedAsync().ConfigureAwait(false);
+            await _tripManager.SendTripReceivedAsync();
             await Task.Delay(2000).ConfigureAwait(false);
             await _tripManager.SendAcceptTripAsync().ConfigureAwait(false);
         }

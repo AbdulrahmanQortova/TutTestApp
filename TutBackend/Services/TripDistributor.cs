@@ -45,7 +45,7 @@ public class TripDistributor : BackgroundService
                 _logger.LogInformation("Found unassigned trip {TripId}, finding best driver...", trip.Id);
 
                 // Use the injected DriverSelector to pick the best driver
-                var bestDriver = await _driverSelector.FindBestDriverAsync(trip, [], driverLocationRepository, driverRepository).ConfigureAwait(false);
+                var bestDriver = await _driverSelector.FindBestDriverAsync(trip, [], driverLocationRepository, driverRepository);
                 if (bestDriver is null)
                 {
                     _logger.LogInformation("No suitable driver found for trip {TripId}", trip.Id);
