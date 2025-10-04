@@ -210,4 +210,99 @@ public class TripRepositoryTests
         Assert.Equal(driver.Id, got.Driver.Id);
         Assert.True(got.Status != TripState.Unspecified && got.Status != TripState.Ended && got.Status != TripState.Canceled);
     }
+
+    [Fact]
+    public async Task GetOneUnassignedTripAsync_ReturnsEarliestUnassignedTrip_WithIncludes()
+    {
+        // Arrange
+        var dbName = nameof(GetOneUnassignedTripAsync_ReturnsEarliestUnassignedTrip_WithIncludes) + Guid.NewGuid();
+        await using var context = CreateContext(dbName);
+
+        var user = new User { Mobile = "u1" };
+        var driver = new Driver { Mobile = "d1" };
+        var place = new Place { Name = "P1", Location = new GLocation { Latitude = 1, Longitude = 1 } };
+        await context.AddRangeAsync(user, driver, place);
+        await context.SaveChangesAsync();
+
+        var now = DateTime.UtcNow;
+        var earlier = new Trip
+        {
+            User = user,
+            Driver = null,
+            RequestedDriverPlace = place,
+            RequestingPlace = place,
+            CreatedAt = now.AddMinutes(-10),
+            Status = TripState.Requested,
+            Stops = new List<Stop> { new Stop { Place = place } }
+        };
+
+        var later = new Trip
+        {
+            User = user,
+            Driver = null,
+            RequestedDriverPlace = place,
+            RequestingPlace = place,
+            CreatedAt = now.AddMinutes(-1),
+            Status = TripState.Requested,
+            Stops = new List<Stop> { new Stop { Place = place } }
+        };
+
+        // also add a trip that has a driver assigned which should be ignored
+        var assigned = new Trip
+        {
+            User = user,
+            Driver = driver,
+            RequestedDriverPlace = place,
+            RequestingPlace = place,
+            CreatedAt = now.AddMinutes(-20),
+            Status = TripState.Requested,
+            Stops = new List<Stop> { new Stop { Place = place } }
+        };
+
+        await context.AddRangeAsync(earlier, later, assigned);
+        await context.SaveChangesAsync();
+
+        var repo = new TripRepository(context);
+
+        // Act
+        var got = await repo.GetOneUnassignedTripAsync();
+
+        // Assert
+        Assert.NotNull(got);
+        Assert.Null(got.Driver);
+        Assert.Equal(earlier.CreatedAt, got.CreatedAt);
+        Assert.NotNull(got.User);
+        Assert.NotNull(got.RequestedDriverPlace);
+        Assert.NotNull(got.RequestingPlace);
+        Assert.NotEmpty(got.Stops);
+        Assert.NotNull(got.Stops[0].Place);
+    }
+
+    [Fact]
+    public async Task GetOneUnassignedTripAsync_ReturnsNull_WhenNoneAvailable()
+    {
+        // Arrange
+        var dbName = nameof(GetOneUnassignedTripAsync_ReturnsNull_WhenNoneAvailable) + Guid.NewGuid();
+        await using var context = CreateContext(dbName);
+
+        var user = new User { Mobile = "u1" };
+        var driver = new Driver { Mobile = "d1" };
+        var place = new Place { Name = "P1", Location = new GLocation { Latitude = 1, Longitude = 1 } };
+        await context.AddRangeAsync(user, driver, place);
+        await context.SaveChangesAsync();
+
+        var now = DateTime.UtcNow;
+        var t1 = new Trip { User = user, Driver = driver, CreatedAt = now.AddMinutes(-5), Status = TripState.Requested };
+        var t2 = new Trip { User = user, Driver = driver, CreatedAt = now.AddMinutes(-1), Status = TripState.Requested };
+        await context.AddRangeAsync(t1, t2);
+        await context.SaveChangesAsync();
+
+        var repo = new TripRepository(context);
+
+        // Act
+        var got = await repo.GetOneUnassignedTripAsync();
+
+        // Assert
+        Assert.Null(got);
+    }
 }

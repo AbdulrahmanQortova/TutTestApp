@@ -85,5 +85,19 @@ public class TripRepository(TutDbContext context) : Repository<Trip>(context), I
             .Include(t => t.Stops).ThenInclude(s => s.Place).ThenInclude(p => p!.Location)
             .SingleOrDefaultAsync(t => t.Driver != null && t.Driver.Id == driverId && t.Status != TripState.Unspecified && t.Status != TripState.Ended && t.Status != TripState.Canceled);
     }
+
+    // Returns a single trip that has not yet been assigned to a driver (Driver == null).
+    public async Task<Trip?> GetOneUnassignedTripAsync()
+    {
+        return await _dbSet
+            .Include(t => t.User)
+            .Include(t => t.Driver)
+            .Include(t => t.RequestedDriverPlace).ThenInclude(p => p!.Location)
+            .Include(t => t.RequestingPlace).ThenInclude(p => p!.Location)
+            .Include(t => t.Stops).ThenInclude(s => s.Place).ThenInclude(p => p!.Location)
+            .Where(t => t.Driver == null)
+            .OrderBy(t => t.CreatedAt)
+            .FirstOrDefaultAsync();
+    }
     
 }

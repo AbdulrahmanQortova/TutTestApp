@@ -16,7 +16,56 @@ public class TripDistributor (
     {
         while (!cancellationToken.IsCancellationRequested)
         {
-            
+            try
+            {
+                // Fetch a single unassigned trip directly from the repository.
+                var trip = await tripRepository.GetOneUnassignedTripAsync();
+
+                if (trip is null)
+                {
+                    // Nothing to do right now - wait and retry
+                    await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+                    continue;
+                }
+
+                logger.LogInformation("Found unassigned trip {TripId}, finding best driver...", trip.Id);
+
+                // Find the best driver (no exclusions for now)
+                var bestDriver = await FindBestDriver(trip, []);
+                if (bestDriver is null)
+                {
+                    logger.LogInformation("No suitable driver found for trip {TripId}", trip.Id);
+                    // Wait a bit before retrying so we don't tight-loop on the same trip
+                    await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+                    continue;
+                }
+
+                // Assign driver and persist
+                trip.Driver = bestDriver;
+                await tripRepository.UpdateAsync(trip);
+                logger.LogInformation("Assigned driver {DriverId} to trip {TripId}", bestDriver.Id, trip.Id);
+
+                // Small delay before processing next trip to avoid DB hot loop
+                await Task.Delay(TimeSpan.FromMilliseconds(200), cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                // Graceful shutdown requested
+                break;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error in DistributionLoop");
+                // Backoff on error
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    break;
+                }
+            }
         }
     }
 
@@ -38,7 +87,7 @@ public class TripDistributor (
         }
 
         // Prepare excluded set for fast lookups
-        var excludedSet = new HashSet<int>(excludedIds ?? Array.Empty<int>());
+        var excludedSet = new HashSet<int>(excludedIds);
 
         // Build candidate id list from locations, excluding excluded ids
         var candidateIds = locations
