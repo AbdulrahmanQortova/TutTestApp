@@ -1,5 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
+
 using Grpc.Net.Client;
 using ProtoBuf.Grpc.Client;
 using System.Collections.ObjectModel;
@@ -11,7 +11,18 @@ using TutMauiCommon.ViewModels;
 
 namespace TutBackOffice.PageModels;
 
-public record DriverFilterRow(int Id, string Name, bool Selected);
+public record DriverFilterRow
+{
+    public string Name { get; init; } = string.Empty;
+    public bool Selected { get; set; }
+
+    public DriverFilterRow() { }
+    public DriverFilterRow(string name, bool selected = false)
+    {
+        Name = name;
+        Selected = selected;
+    }
+}
 
 public partial class LiveTrackingPageModel : ObservableObject
 {
@@ -24,6 +35,7 @@ public partial class LiveTrackingPageModel : ObservableObject
     
     private readonly IGDriverLocationService _driverLocationService;
     private readonly IGTripManagerService _tripManagerService;
+    private readonly IGDriverManagerService _driverManagerService;
 
     private CancellationTokenSource? _cts;
 
@@ -33,6 +45,7 @@ public partial class LiveTrackingPageModel : ObservableObject
         GrpcChannel channel = channelFactory.GetChannel();
         _driverLocationService = channel.CreateGrpcService<IGDriverLocationService>();
         _tripManagerService = channel.CreateGrpcService<IGTripManagerService>();
+        _driverManagerService = channel.CreateGrpcService<IGDriverManagerService>();
 
     }
     
@@ -76,6 +89,9 @@ public partial class LiveTrackingPageModel : ObservableObject
     {
         List<Trip> activeTrips = await _tripManagerService.GetAllActiveTrips(new GPartialListRequest());
         List<DriverLocation> driverLocations = await _driverLocationService.GetDriverLocations();
+        // Fetch all drivers to determine their current state so we can filter out offline/unspecified
+        List<Driver> allDrivers = await _driverManagerService.GetAllDrivers();
+        var driverStateById = allDrivers.ToDictionary(d => d.Id, d => d.State);
 
         List<QMapModel.MapRoute> routes = [];
         List<QMapModel.MapPoint> endPoints = [];
@@ -112,10 +128,14 @@ public partial class LiveTrackingPageModel : ObservableObject
             });
         }
 
-        cars.AddRange(driverLocations.Select(driverLocation => new QMapModel.MapCar
-        {
-            Location = new Location(driverLocation.Location.Latitude, driverLocation.Location.Longitude),
-        }));
+        // Only add cars for drivers that exist and whose state is neither Offline nor Unspecified
+        cars.AddRange(driverLocations
+            .Where(dl => driverStateById.TryGetValue(dl.DriverId, out var state) && state != DriverState.Offline && state != DriverState.Unspecified)
+            .Select(driverLocation => new QMapModel.MapCar
+            {
+                Location = new Location(driverLocation.Location.Latitude, driverLocation.Location.Longitude),
+            }));
+
 
         QMapModel mapModel = new()
         {
@@ -130,4 +150,3 @@ public partial class LiveTrackingPageModel : ObservableObject
     }
 
 }
-
