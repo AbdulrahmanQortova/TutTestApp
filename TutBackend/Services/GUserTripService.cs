@@ -82,6 +82,10 @@ public class GUserTripService(
     {
         // Do nothing for now
     }
+    public Task<UserTripPacket> GetState()
+    {
+        return Task.FromResult(UserTripPacket.StatusUpdate(_activeTrip));
+    }
 
 
     private async Task ReportTripStatusUpdates(CancellationToken cancellationToken)
