@@ -55,7 +55,7 @@ public class DriverTripManagerTests
     private static DriverTripManager CreateManagerWithFake(IGDriverTripService fake)
     {
         var factory = new TestGrpcChannelFactory();
-        var mgr = new DriverTripManager(factory);
+        var mgr = new DriverTripManager("someToken", factory);
         var fi = typeof(DriverTripManager).GetField("_driverTripService", BindingFlags.Instance | BindingFlags.NonPublic)!;
         fi.SetValue(mgr, fake);
         return mgr;

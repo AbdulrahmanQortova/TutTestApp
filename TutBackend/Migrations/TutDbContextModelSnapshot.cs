@@ -255,6 +255,9 @@ namespace TutBackend.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime>("DriverArrivalTime")
+                        .HasColumnType("datetime2");
+
                     b.Property<int?>("DriverId")
                         .HasColumnType("int");
 

@@ -4,6 +4,7 @@ using System.Threading.Channels;
 using Tut.Common.GServices;
 using Tut.Common.Models;
 using Grpc.Core;
+using ProtoBuf.Grpc;
 
 namespace Tut.Common.Managers;
 
@@ -18,6 +19,7 @@ public class DriverTripManager
     private ConnectionState _connectionState = ConnectionState.Disconnected;
     private Trip? _currentTrip;
 
+    private CallOptions _callOptions;
     public ConnectionState CurrentState
     {
         get { lock (_stateLock) { return _connectionState; } }
@@ -34,10 +36,13 @@ public class DriverTripManager
     public event EventHandler<ErrorReceivedEventArgs>? ErrorReceived;
     public event EventHandler<ConnectionStateChangedEventArgs>? ConnectionStateChanged;
 
-    public DriverTripManager(IGrpcChannelFactory channelFactory)
+    public DriverTripManager(string token, IGrpcChannelFactory channelFactory)
     {
         GrpcChannel grpcChannel = channelFactory.GetChannel();
         _driverTripService = grpcChannel.CreateGrpcService<IGDriverTripService>();
+        Metadata metadata = [];
+        metadata.Add("Authorization", $"Bearer {token}");
+        _callOptions = new CallOptions(metadata);
     }
 
     public async Task Connect(CancellationToken cancellationToken)
@@ -69,7 +74,7 @@ public class DriverTripManager
                     try
                     {
                         var requestStream = _requestChannel!.Reader.ReadAllAsync(linkedToken);
-                        var responseStream = _driverTripService.Connect(requestStream);
+                        var responseStream = _driverTripService.Connect(requestStream, new CallContext(_callOptions));
 
                         attempt = 0;
 

@@ -7,6 +7,7 @@ using Tut.Common.GServices;
 using Tut.Common.Models;
 using Tut.Common.Utils;
 using System.Threading;
+using Tut.Common.Managers;
 namespace Tut.Agents;
 
 public class DriverAgent
@@ -14,12 +15,11 @@ public class DriverAgent
     private readonly string _username;
     private readonly string _password;
     private readonly Options _options;
-    private readonly IGDriverLocationService _locationService;
     private GLocation _currentLocation;
     private CancellationTokenSource _runCts = new();
-    private Channel<GLocation>? _locationChannel; 
     
-    
+    private readonly DriverLocationManagerService _locationManager;
+    private readonly DriverTripManager _tripManager;
     
     public DriverAgent(string username, string password) : this(username, password, new Options()) { }
     public DriverAgent(string username, string password, Options options)
@@ -28,59 +28,149 @@ public class DriverAgent
         _password = password;
         _options = options;
         GrpcClientFactory.AllowUnencryptedHttp2 = true;
-        GrpcChannel channel = GrpcChannel.ForAddress("http://localhost:5040");
-        _locationService = channel.CreateGrpcService<IGDriverLocationService>();
+        GrpcChannelFactory factory = new GrpcChannelFactory("http://localhost:5040");
         _currentLocation = RandomLocationInside(options.WanderBottomLeft, options.WanderTopRight);
+        _locationManager = new DriverLocationManagerService(username, factory);
+        _tripManager = new DriverTripManager(username, factory);
     }
 
 
     public void Start()
     {
-        _locationChannel = Channel.CreateBounded<GLocation>(new BoundedChannelOptions(20)
-        {
-            FullMode = BoundedChannelFullMode.DropOldest
-        });
-        _channelCompleted = false;
-        Metadata headers = [];
-        headers.Add("Authorization", $"Bearer {_username}");
-
-        // Start the streaming call without awaiting so it runs in background.
-        var callContext = new CallContext(new CallOptions(headers));
-        _ = _locationService.RegisterLocation(_locationChannel.Reader.ReadAllAsync(), callContext);
-
         _runCts = new CancellationTokenSource();
-        _ = Task.Run(() => RunLoop(_runCts.Token));
+        _locationManager.ErrorReceived += (s, e) => Console.WriteLine("LM> " + e.ErrorText);
+        _tripManager.ErrorReceived += (s, e) => Console.WriteLine("TM> " + e.ErrorText);
+        _tripManager.ConnectionStateChanged += (s, e) => Console.WriteLine("TM> " + e.NewState);
+        _tripManager.OfferReceived += async (s, e) =>
+        {
+            if (_wanderCts is not null)
+            {
+                await _wanderCts.CancelAsync();
+                _wanderCts.Dispose();
+                _wanderCts = null;
+            }
+            await _tripManager.SendTripReceivedAsync();
+            await Task.Delay(2000);
+            await _tripManager.SendAcceptTripAsync();
+        };
+        _tripManager.StatusChanged += async (s, e) => await HandleStatusUpdate(e.Trip);
+        _ = _locationManager.Connect(_runCts.Token, TimeSpan.FromSeconds(2));
+        _ = _tripManager.Connect(_runCts.Token);
+        _ = _tripManager.SendPunchInAsync(_runCts.Token);
+    }
+
+    private int _lastStop;
+    private async Task HandleStatusUpdate(Trip? trip)
+    {
+        CancellationTokenSource onTripMovementCancellation = new();
+        if (trip is null)
+        {
+            if (_wanderCts is null)
+            {
+                _wanderCts = new CancellationTokenSource();
+                _ = WanderLoop(_wanderCts.Token);
+            }
+            return;
+        }
+        switch (trip.Status)
+        {
+            case TripState.Accepted:
+                await MoveTo(trip.Stops[0].Place.Location, onTripMovementCancellation.Token);
+                if(!onTripMovementCancellation.IsCancellationRequested)
+                    await _tripManager.SendArrivedAtPickupAsync(onTripMovementCancellation.Token);
+                break;
+            case TripState.DriverArrived:
+                await Task.Delay(TimeSpan.FromSeconds(_options.ArrivalWaitTimeSeconds), onTripMovementCancellation.Token);
+                if (!onTripMovementCancellation.IsCancellationRequested)
+                    await MoveTo(trip.Stops[1].Place.Location, onTripMovementCancellation.Token);
+                if (!onTripMovementCancellation.IsCancellationRequested)
+                {
+                    if (trip.Stops.Count > 2)
+                        await _tripManager.SendArrivedAtStopAsync(onTripMovementCancellation.Token);
+                    else
+                        await _tripManager.SendArrivedAtDestinationAsync(onTripMovementCancellation.Token);
+                }
+                break;
+            case TripState.AtStop1:
+            case TripState.AtStop2:
+            case TripState.AtStop3:
+            case TripState.AtStop4:
+            case TripState.AtStop5:
+                await Task.Delay(TimeSpan.FromSeconds(_options.StopWaitTimeSeconds), onTripMovementCancellation.Token);
+                if (!onTripMovementCancellation.IsCancellationRequested)
+                    await _tripManager.SendContinueTripAsync(onTripMovementCancellation.Token);
+                break;
+            case TripState.AfterStop1:
+                if (!onTripMovementCancellation.IsCancellationRequested)
+                    await MoveTo(trip.Stops[2].Place.Location, onTripMovementCancellation.Token);
+                if (!onTripMovementCancellation.IsCancellationRequested)
+                {
+                    if (trip.Stops.Count > 3)
+                        await _tripManager.SendArrivedAtStopAsync(onTripMovementCancellation.Token);
+                    else
+                        await _tripManager.SendArrivedAtDestinationAsync(onTripMovementCancellation.Token);
+                }
+                break;
+            case TripState.AfterStop2:
+                if (!onTripMovementCancellation.IsCancellationRequested)
+                    await MoveTo(trip.Stops[3].Place.Location, onTripMovementCancellation.Token);
+                if (!onTripMovementCancellation.IsCancellationRequested)
+                {
+                    if (trip.Stops.Count > 4)
+                        await _tripManager.SendArrivedAtStopAsync(onTripMovementCancellation.Token);
+                    else
+                        await _tripManager.SendArrivedAtDestinationAsync(onTripMovementCancellation.Token);
+                }
+                break;
+            case TripState.AfterStop3:
+                if (!onTripMovementCancellation.IsCancellationRequested)
+                    await MoveTo(trip.Stops[4].Place.Location, onTripMovementCancellation.Token);
+                if (!onTripMovementCancellation.IsCancellationRequested)
+                {
+                    if (trip.Stops.Count > 5)
+                        await _tripManager.SendArrivedAtStopAsync(onTripMovementCancellation.Token);
+                    else
+                        await _tripManager.SendArrivedAtDestinationAsync(onTripMovementCancellation.Token);
+                }
+                break;
+            case TripState.AfterStop4:
+                if (!onTripMovementCancellation.IsCancellationRequested)
+                    await MoveTo(trip.Stops[5].Place.Location, onTripMovementCancellation.Token);
+                if (!onTripMovementCancellation.IsCancellationRequested)
+                {
+                    if (trip.Stops.Count > 6)
+                        await _tripManager.SendArrivedAtStopAsync(onTripMovementCancellation.Token);
+                    else
+                        await _tripManager.SendArrivedAtDestinationAsync(onTripMovementCancellation.Token);
+                }
+                break;
+            case TripState.AfterStop5:
+                if (!onTripMovementCancellation.IsCancellationRequested)
+                    await MoveTo(trip.Stops[6].Place.Location, onTripMovementCancellation.Token);
+                if (!onTripMovementCancellation.IsCancellationRequested)
+                    await _tripManager.SendArrivedAtDestinationAsync(onTripMovementCancellation.Token);
+                break;
+            case TripState.Arrived:
+                if (!onTripMovementCancellation.IsCancellationRequested)
+                    await Task.Delay(TimeSpan.FromMicroseconds(_options.PaymentWaitTimeSeconds), onTripMovementCancellation.Token);
+                if (!onTripMovementCancellation.IsCancellationRequested)
+                    await _tripManager.SendCashPaymentMadeAsync((int)trip.ActualCost, onTripMovementCancellation.Token);
+                break;
+        }
     }
 
     public void Stop()
     {
-        _channelCompleted = true;
-        _locationChannel?.Writer.Complete();
+        _ = _locationManager.Disconnect();
         _runCts.Cancel();
         _runCts.Dispose();
     }
 
+    private CancellationTokenSource? _wanderCts;
 
-    private async Task RunLoop(CancellationToken ct)
-    {
-        CancellationTokenSource wanderCts = new ();
-        while (!ct.IsCancellationRequested)
-        {
-            await WanderLoop(wanderCts.Token);
-        }
-        await wanderCts.CancelAsync();
-    }
-
-    private Task TripProcess(Trip trip)
-    {
-        return Task.CompletedTask;
-    }
-
-    private bool _channelCompleted;
     private async Task NotifyLocationChanged()
     {
-        if (!_channelCompleted && _locationChannel is not null)
-            await _locationChannel.Writer.WriteAsync(_currentLocation);
+        _locationManager.RegisterLocation(_currentLocation);
     }
     
     private async Task WanderLoop(CancellationToken ct)
@@ -164,7 +254,7 @@ public class DriverAgent
         public int ArrivalWaitTimeSeconds { get; set; } = 20;
         public int StopWaitTimeSeconds { get; set; } = 20;
         public int PaymentWaitTimeSeconds { get; set; } = 20;
-        public int Speed { get; set; } = 70;
+        public int Speed { get; set; } = 200;
         public readonly GLocation WanderBottomLeft = new GLocation { Latitude = 30, Longitude = 31.15 };
         public readonly GLocation WanderTopRight = new GLocation { Latitude = 30.15, Longitude = 31.5 };
     }

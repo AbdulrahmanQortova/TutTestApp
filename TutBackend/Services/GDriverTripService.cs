@@ -69,7 +69,7 @@ public class GDriverTripService(
             {
                 while (reader.TryRead(out var outPacket))
                 {
-                    if(outPacket.Type != DriverTripPacketType.Unspecified)
+                    if (outPacket.Type != DriverTripPacketType.Unspecified)
                         yield return outPacket;
                 }
             }
@@ -78,10 +78,11 @@ public class GDriverTripService(
         {
             // ensure channel is completed
             _responseChannel.Writer.TryComplete();
+            _driver.State = DriverState.Offline;
+            await driverRepository.UpdateAsync(_driver);
         }
-        _driver.State = DriverState.Offline;
-        await driverRepository.UpdateAsync(_driver);
     }
+
 
     private async Task WaitForTripAsync(CancellationToken cancellationToken = default)
     {
