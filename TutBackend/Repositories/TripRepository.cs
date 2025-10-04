@@ -28,7 +28,7 @@ public class TripRepository(TutDbContext context) : Repository<Trip>(context), I
             .Include(t => t.RequestedDriverPlace).ThenInclude(p => p!.Location)
             .Include(t => t.RequestingPlace).ThenInclude(p => p!.Location)
             .Include(t => t.Stops).ThenInclude(s => s.Place).ThenInclude(p => p!.Location)
-            .Where(t => t.Status != TripState.Unspecified && t.Status == TripState.Ended && t.Status == TripState.Canceled)
+            .Where(t => t.Status == TripState.Unspecified && t.Status != TripState.Ended && t.Status != TripState.Canceled)
             .OrderBy(t => t.CreatedAt)
             .Skip(skip)
             .Take(take)
@@ -73,7 +73,7 @@ public class TripRepository(TutDbContext context) : Repository<Trip>(context), I
             .Include(t => t.RequestedDriverPlace).ThenInclude(p => p!.Location)
             .Include(t => t.RequestingPlace).ThenInclude(p => p!.Location)
             .Include(t => t.Stops).ThenInclude(s => s.Place).ThenInclude(p => p!.Location)
-            .SingleOrDefaultAsync(t => t.User.Id == userId && t.Status != TripState.Unspecified && t.Status == TripState.Ended && t.Status == TripState.Canceled);
+            .SingleOrDefaultAsync(t => t.User.Id == userId && t.Status != TripState.Unspecified && t.Status != TripState.Ended && t.Status != TripState.Canceled);
     }
     public async Task<Trip?> GetActiveTripForDriver(int driverId)
     {
@@ -83,7 +83,7 @@ public class TripRepository(TutDbContext context) : Repository<Trip>(context), I
             .Include(t => t.RequestedDriverPlace).ThenInclude(p => p!.Location)
             .Include(t => t.RequestingPlace).ThenInclude(p => p!.Location)
             .Include(t => t.Stops).ThenInclude(s => s.Place).ThenInclude(p => p!.Location)
-            .SingleOrDefaultAsync(t => t.Driver != null && t.Driver.Id == driverId && t.Status != TripState.Unspecified && t.Status == TripState.Ended && t.Status == TripState.Canceled);
+            .SingleOrDefaultAsync(t => t.Driver != null && t.Driver.Id == driverId && t.Status != TripState.Unspecified && t.Status != TripState.Ended && t.Status != TripState.Canceled);
     }
     
 }

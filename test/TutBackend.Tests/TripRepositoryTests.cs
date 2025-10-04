@@ -73,7 +73,7 @@ public class TripRepositoryTests
         var result = await repo.GetActiveTripsAsync(take: 10, skip: 0);
 
         // Assert
-        Assert.All(result, t => Assert.True(t.Status == TripState.Requested || t.Status == TripState.DriverArrived || t.Status == TripState.Started || t.Status == TripState.Arrived));
+        Assert.All(result, t => Assert.True(t.Status != TripState.Unspecified && t.Status != TripState.Ended && t.Status != TripState.Canceled));
         // Ordered ascending by CreatedAt
         for (int i = 1; i < result.Count; i++)
         {
@@ -176,7 +176,7 @@ public class TripRepositoryTests
         // Assert
         Assert.NotNull(got);
         Assert.Equal(user.Id, got.User.Id);
-        Assert.True(got.Status == TripState.Requested || got.Status == TripState.DriverArrived || got.Status == TripState.Started || got.Status == TripState.Arrived);
+        Assert.True(got.Status != TripState.Unspecified && got.Status != TripState.Ended && got.Status != TripState.Canceled);
     }
 
     [Fact]
@@ -208,6 +208,6 @@ public class TripRepositoryTests
         Assert.NotNull(got);
         Assert.NotNull(got.Driver);
         Assert.Equal(driver.Id, got.Driver.Id);
-        Assert.True(got.Status == TripState.Requested || got.Status == TripState.DriverArrived || got.Status == TripState.Started || got.Status == TripState.Arrived);
+        Assert.True(got.Status != TripState.Unspecified && got.Status != TripState.Ended && got.Status != TripState.Canceled);
     }
 }
