@@ -5,6 +5,6 @@ namespace Tut.Common.Models;
 public class SavedPlace
 {
     public int Id { get; set; }
-    [ProtoMember(1)]
+    [ProtoMember(1, AsReference = true)]
     public required Place Place { get; set; }
 }

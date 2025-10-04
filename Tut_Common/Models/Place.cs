@@ -10,7 +10,7 @@ public class Place
     public string Name { get; set; } = string.Empty;
     [ProtoMember(3)]
     public string Address { get; set; } = string.Empty;
-    [ProtoMember(4)]
+    [ProtoMember(4, AsReference = true)]
     public GLocation Location { get; set; } = new();
     [ProtoMember(5)]
     public PlaceType PlaceType { get; set; } = PlaceType.Unspecified;

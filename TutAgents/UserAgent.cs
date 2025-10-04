@@ -66,7 +66,7 @@ public class UserAgent
         var rng = Random.Shared;
         while (!token.IsCancellationRequested)
         {
-            int delaySec = rng.Next(10, 31); // 1-30 seconds
+            int delaySec = rng.Next(1, 31); // 1-30 seconds
             Console.WriteLine($"UA> Waiting {delaySec}s before requesting a trip...");
             try
             {

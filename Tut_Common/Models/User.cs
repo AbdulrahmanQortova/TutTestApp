@@ -26,9 +26,9 @@ public class User
     [ProtoMember(10)]
     public double TotalSpending { get; set; }
     
-    [ProtoMember(11)]
+    [ProtoMember(11, AsReference = true)]
     public List<SavedPlace>? SavedPlaces { get; set; }
-    [ProtoMember(12)]
+    [ProtoMember(12, AsReference = true)]
     public List<Trip>? Trips { get; set; }
     
     

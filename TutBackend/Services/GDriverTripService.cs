@@ -11,6 +11,7 @@ public class GDriverTripService(
     IDriverRepository driverRepository,
     ITripRepository tripRepository,
     QipClient qipClient,
+    IServiceScopeFactory scopeFactory,
     ILogger<GDriverManagerService> logger
     )
     : IGDriverTripService
@@ -19,8 +20,10 @@ public class GDriverTripService(
     private Driver? _driver;
     private readonly CancellationTokenSource _cancellation = new ();
     private Trip? _activeTrip;
+
     public async IAsyncEnumerable<DriverTripPacket> Connect(IAsyncEnumerable<DriverTripPacket> requestPackets, CallContext context = default)
     {
+        // Use the injected repositories for initial authorization within the request thread.
         var driver = await AuthUtils.AuthorizeDriver(context, driverRepository, qipClient);
         _driver = driver ?? throw new RpcException(new Status(StatusCode.Unauthenticated, "Unauthorized"));
 
@@ -32,7 +35,6 @@ public class GDriverTripService(
             FullMode = BoundedChannelFullMode.DropOldest
         });
 
-        
         Trip? trip = await tripRepository.GetActiveTripForDriver(driver.Id);
         await _responseChannel.Writer.WriteAsync(DriverTripPacket.StatusUpdate(trip));
 
@@ -78,8 +80,22 @@ public class GDriverTripService(
         {
             // ensure channel is completed
             _responseChannel.Writer.TryComplete();
-            _driver.State = DriverState.Offline;
-            await driverRepository.UpdateAsync(_driver);
+
+            // Update driver state offline using a fresh scope to avoid cross-thread DbContext access
+            try
+            {
+                using var scope = scopeFactory.CreateScope();
+                var scopedDriverRepo = (IDriverRepository)scope.ServiceProvider.GetService(typeof(IDriverRepository))!;
+                if (_driver is not null)
+                {
+                    _driver.State = DriverState.Offline;
+                    await scopedDriverRepo.UpdateAsync(_driver);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to set driver offline in cleanup");
+            }
         }
     }
 
@@ -92,38 +108,54 @@ public class GDriverTripService(
         while (!cancellationToken.IsCancellationRequested)
         {
             await Task.Delay(1000, cancellationToken);
-            if (_driver is null) continue;
-            if (_responseChannel is null) continue;
-            if (_driver.State != DriverState.Available) continue;
-            
-            Trip? trip = await tripRepository.GetActiveTripForDriver(_driver.Id);
-            if (trip is null) continue;
-            if (trip.Id != tripIdOffered || trip.Status != TripState.Requested)
+            if (_driver is null || _responseChannel is null || _driver.State != DriverState.Available) continue;
+
+            try
             {
-                offerSent = false;
-                tripIdOffered = 0;
-                offerSentTimeStamp = DateTime.MinValue;
-            }
-            else if (!offerSent || offerSentTimeStamp.Subtract(TimeSpan.FromMinutes(1)) > DateTime.UtcNow)
-            {
-                DriverTripPacket packet = new DriverTripPacket
+                using var scope = scopeFactory.CreateScope();
+                var scopedTripRepo = (ITripRepository)scope.ServiceProvider.GetService(typeof(ITripRepository))!;
+                Trip? trip = await scopedTripRepo.GetActiveTripForDriver(_driver.Id);
+
+                if (trip is null)
                 {
-                    Type = DriverTripPacketType.OfferTrip,
-                    Trip = trip
-                };
-                _activeTrip = trip;
-                await _responseChannel.Writer.WriteAsync(packet, cancellationToken);
-                
-                logger.LogDebug("{Driver} sent offer trip {Trip}", _driver.FullName, trip.Id);
-                
-                offerSent = true;
-                tripIdOffered = trip.Id;
-                offerSentTimeStamp = DateTime.UtcNow;
+                    offerSent = false;
+                    tripIdOffered = 0;
+                    offerSentTimeStamp = DateTime.MinValue;
+                    continue;
+                }
+                if (trip.Id != tripIdOffered || trip.Status != TripState.Requested)
+                {
+                    offerSent = false;
+                    tripIdOffered = 0;
+                    offerSentTimeStamp = DateTime.MinValue;
+                }
+
+                if (!offerSent || offerSentTimeStamp.AddMinutes(1) <= DateTime.UtcNow)
+                {
+                    var packet = new DriverTripPacket { Type = DriverTripPacketType.OfferTrip, Trip = trip };
+                    _activeTrip = trip;
+                    await _responseChannel.Writer.WriteAsync(packet, cancellationToken);
+
+                    var driverName = _driver!.FullName;
+                    logger.LogDebug("{Driver} sent offer trip {Trip}", driverName, trip.Id);
+
+                    offerSent = true;
+                    tripIdOffered = trip.Id;
+                    offerSentTimeStamp = DateTime.UtcNow;
+                }
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                // expected
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error while checking for trips in WaitForTripAsync");
             }
         }
     }
 
-    private DriverTripPacket HandlePunchIn()
+    private async Task<DriverTripPacket> HandlePunchInAsync(IDriverRepository scopedDriverRepo)
     {
         if (_driver is null) return new DriverTripPacket();
         if (_driver.State != DriverState.Inactive && _driver.State != DriverState.Offline)
@@ -132,11 +164,11 @@ public class GDriverTripService(
         }
         logger.LogDebug("Driver {Driver} punched in", _driver.FullName);
         _driver.State = DriverState.Available;
-        driverRepository.UpdateAsync(_driver);
+        await scopedDriverRepo.UpdateAsync(_driver);
         return new DriverTripPacket();
     }
     
-    private DriverTripPacket HandlePunchOut()
+    private async Task<DriverTripPacket> HandlePunchOutAsync(IDriverRepository scopedDriverRepo)
     {
         if (_driver is null) return new DriverTripPacket();
         if (_driver.State != DriverState.Available)
@@ -145,28 +177,34 @@ public class GDriverTripService(
         }
         logger.LogDebug("Driver {Driver} punched out", _driver.FullName);
         _driver.State = DriverState.Inactive;
-        driverRepository.UpdateAsync(_driver);
+        await scopedDriverRepo.UpdateAsync(_driver);
         return new DriverTripPacket();
     }
 
-    private DriverTripPacket HandleTripReceived()
+    private async Task<DriverTripPacket> HandleTripReceived(ITripRepository scopedTripRepo, IDriverRepository scopedDriverRepo)
     {
         if (_driver is null) return new DriverTripPacket();
-        if (_driver.State != DriverState.Requested)
+        Driver? scopedDriver = await scopedDriverRepo.GetByIdAsync(_driver.Id);
+        Trip? scopedTrip = _activeTrip == null ? null : await scopedTripRepo.GetByIdAsync(_activeTrip.Id);
+        if (scopedDriver!.State != DriverState.Requested)
         {
-            logger.LogError("Driver {Driver} Ack Trip Received while he is in State: {State}", _driver.FullName, _driver.State.ToString());
+            logger.LogError("Driver {Driver} Ack Trip Received while he is in State: {State}", scopedDriver.FullName, scopedDriver.State.ToString());
             return new DriverTripPacket();
         }
-        if (_activeTrip is null)
+        if (scopedTrip is null)
         {
-            logger.LogError("Driver {Driver} Ack Trip Received while there are no active trip for him", _driver.FullName);
+            logger.LogError("Driver {Driver} Ack Trip Received while there are no active trip for him", scopedDriver.FullName);
             return new DriverTripPacket();
         }
-        logger.LogDebug("Driver {Driver} Ack Trip {Trip} Received", _driver.FullName, _activeTrip.Id);
+        logger.LogDebug("Driver {Driver} Ack Trip {Trip} Received", scopedDriver.FullName, scopedTrip.Id);
+
+        scopedTrip.Status = TripState.Acknowledged;
+        await scopedTripRepo.UpdateAsync(scopedTrip);
+
         return new DriverTripPacket();
     }
 
-    private async Task<DriverTripPacket> HandleAcceptTripAsync()
+    private async Task<DriverTripPacket> HandleAcceptTripAsync(IDriverRepository scopedDriverRepo, ITripRepository scopedTripRepo)
     {
         if (_driver is null) return new DriverTripPacket();
         if (_driver.State != DriverState.Requested)
@@ -183,13 +221,13 @@ public class GDriverTripService(
         logger.LogDebug("Driver {Driver} Accepted Trip {Trip}", _driver.FullName, _activeTrip.Id);
 
         _driver.State = DriverState.EnRoute;
-        await driverRepository.UpdateAsync(_driver);
+        await scopedDriverRepo.UpdateAsync(_driver);
         _activeTrip.Status = TripState.Accepted;
-        await tripRepository.UpdateAsync(_activeTrip);
+        await scopedTripRepo.UpdateAsync(_activeTrip);
         return DriverTripPacket.StatusUpdate(_activeTrip);
     }
 
-    private async Task<DriverTripPacket> HandleDriverArrivedAsync()
+    private async Task<DriverTripPacket> HandleDriverArrivedAsync(ITripRepository scopedTripRepo)
     {
         if (_driver is null) return new DriverTripPacket();
         if (_driver.State != DriverState.EnRoute)
@@ -208,11 +246,11 @@ public class GDriverTripService(
         _activeTrip.Status = TripState.DriverArrived;
         _activeTrip.DriverArrivalTime = DateTime.UtcNow;
         _activeTrip.ActualArrivalDuration = (_activeTrip.DriverArrivalTime - _activeTrip.CreatedAt).Seconds;
-        await tripRepository.UpdateAsync(_activeTrip);
+        await scopedTripRepo.UpdateAsync(_activeTrip);
         return DriverTripPacket.StatusUpdate(_activeTrip);
     }
 
-    private async Task<DriverTripPacket> HandleTripStartedAsync()
+    private async Task<DriverTripPacket> HandleTripStartedAsync(ITripRepository scopedTripRepo)
     {
         if (_driver is null) return new DriverTripPacket();
         if (_driver.State != DriverState.EnRoute)
@@ -230,12 +268,11 @@ public class GDriverTripService(
 
         _activeTrip.Status = TripState.Started;
         _activeTrip.StartTime = DateTime.UtcNow;
-        await tripRepository.UpdateAsync(_activeTrip);
+        await scopedTripRepo.UpdateAsync(_activeTrip);
         return DriverTripPacket.StatusUpdate(_activeTrip);
     }
 
-    
-    private async Task<DriverTripPacket> HandleTripStopProgressAsync(TripState tripState)
+    private async Task<DriverTripPacket> HandleTripStopProgressAsync(ITripRepository scopedTripRepo, TripState tripState)
     {
         if (_driver is null) return new DriverTripPacket();
         if (_activeTrip is null)
@@ -288,11 +325,11 @@ public class GDriverTripService(
         logger.LogDebug("Driver {Driver} Reported State: {State}, Trip: {Trip}", _driver.FullName, tripState, _activeTrip.Id);
         
         _activeTrip.Status = tripState;
-        await tripRepository.UpdateAsync(_activeTrip);
+        await scopedTripRepo.UpdateAsync(_activeTrip);
         return DriverTripPacket.StatusUpdate(_activeTrip);
     }
 
-    private async Task<DriverTripPacket> HandleArrivedAtDestinationAsync()
+    private async Task<DriverTripPacket> HandleArrivedAtDestinationAsync(ITripRepository scopedTripRepo)
     {
         if (_driver is null) return new DriverTripPacket();
         if (_driver.State != DriverState.EnRoute)
@@ -313,11 +350,11 @@ public class GDriverTripService(
         _activeTrip.ActualTripDuration = (_activeTrip.EndTime - _activeTrip.StartTime).Seconds;
         _activeTrip.ActualDistance = _activeTrip.EstimatedDistance;
         _activeTrip.ActualCost = _activeTrip.EstimatedCost;
-        await tripRepository.UpdateAsync(_activeTrip);
+        await scopedTripRepo.UpdateAsync(_activeTrip);
         return DriverTripPacket.StatusUpdate(_activeTrip);
     }
     
-    private async Task<DriverTripPacket> HandlePaymentMadeAsync()
+    private async Task<DriverTripPacket> HandlePaymentMadeAsync(IDriverRepository scopedDriverRepo, ITripRepository scopedTripRepo)
     {
         if (_driver is null) return new DriverTripPacket();
         if (_activeTrip is null)
@@ -329,9 +366,9 @@ public class GDriverTripService(
         logger.LogDebug("Driver {Driver} Reported Payment, Trip: {Trip}, Amount: {Amount}", _driver.FullName, _activeTrip.Id, _activeTrip.ActualCost);
         
         _driver.State = DriverState.Available;
-        await driverRepository.UpdateAsync(_driver);
+        await scopedDriverRepo.UpdateAsync(_driver);
         _activeTrip.Status = TripState.Ended;
-        await tripRepository.UpdateAsync(_activeTrip);
+        await scopedTripRepo.UpdateAsync(_activeTrip);
 
         _activeTrip = null;
         
@@ -344,29 +381,34 @@ public class GDriverTripService(
     {
         try
         {
+            // Resolve scoped repositories per incoming packet to avoid sharing DbContext across threads
+            using var scope = scopeFactory.CreateScope();
+            var scopedDriverRepo = (IDriverRepository)scope.ServiceProvider.GetService(typeof(IDriverRepository))!;
+            var scopedTripRepo = (ITripRepository)scope.ServiceProvider.GetService(typeof(ITripRepository))!;
+
             switch (packet.Type)
             {
                 case DriverTripPacketType.PunchIn:
-                    return HandlePunchIn();
+                    return await HandlePunchInAsync(scopedDriverRepo);
                 case DriverTripPacketType.PunchOut:
-                    return HandlePunchOut();
+                    return await HandlePunchOutAsync(scopedDriverRepo);
                 case DriverTripPacketType.TripReceived:
-                    return HandleTripReceived();
+                    return await HandleTripReceived(scopedTripRepo, scopedDriverRepo);
                 case DriverTripPacketType.AcceptTrip:
-                    return await HandleAcceptTripAsync();
+                    return await HandleAcceptTripAsync(scopedDriverRepo, scopedTripRepo);
 
                 case DriverTripPacketType.ArrivedAtPickup:
-                    return await HandleDriverArrivedAsync();
+                    return await HandleDriverArrivedAsync(scopedTripRepo);
                 case DriverTripPacketType.StartTrip:
-                    return await HandleTripStartedAsync();
+                    return await HandleTripStartedAsync(scopedTripRepo);
                 case DriverTripPacketType.ArrivedAtStop:
-                    return await HandleTripStopProgressAsync(TripState.AtStop1);
+                    return await HandleTripStopProgressAsync(scopedTripRepo, TripState.AtStop1);
                 case DriverTripPacketType.ContinueTrip:
-                    return await HandleTripStopProgressAsync(TripState.AfterStop1);
+                    return await HandleTripStopProgressAsync(scopedTripRepo, TripState.AfterStop1);
                 case DriverTripPacketType.ArrivedAtDestination:
-                    return await HandleArrivedAtDestinationAsync();
+                    return await HandleArrivedAtDestinationAsync(scopedTripRepo);
                 case DriverTripPacketType.CashPaymentMade:
-                    return await HandlePaymentMadeAsync();
+                    return await HandlePaymentMadeAsync(scopedDriverRepo, scopedTripRepo);
                 case DriverTripPacketType.GetStatus:
                     return DriverTripPacket.StatusUpdate(_activeTrip);
 
@@ -376,10 +418,11 @@ public class GDriverTripService(
                     return DriverTripPacket.Error("Unknown packet type");
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Error while processing driver packets");
             // If processing a single packet fails, send an Error packet back
-                return DriverTripPacket.Error("Error while processing driver packets");
+            return DriverTripPacket.Error("Error while processing driver packets");
         }
     }
 

@@ -9,17 +9,16 @@ public class Trip
     [ProtoMember(1)]
     public int Id { get; set; }
 
-    [ProtoMember(2)]
+    [ProtoMember(2, AsReference = true)]
     public required User User { get; set; }
     
-    [ProtoMember(3)]
-    
+    [ProtoMember(3, AsReference = true)]
     public Driver? Driver { get; set; }
     
-    [ProtoMember(4)]
+    [ProtoMember(4, AsReference = true)]
     public Place? RequestedDriverPlace { get; set; }
     
-    [ProtoMember(5)]
+    [ProtoMember(5, AsReference = true)]
     public Place? RequestingPlace { get; set; }
     
     [ProtoMember(6)]
@@ -67,9 +66,10 @@ public enum TripState
 {
     Unspecified = 0,
     Requested = 1,
-    Accepted = 2,
-    DriverArrived = 3,
-    Started = 4,
+    Acknowledged = 2,
+    Accepted = 3,
+    DriverArrived = 4,
+    Started = 5,
     AtStop1 = 10,
     AfterStop1 = 11,
     AtStop2 = 12,

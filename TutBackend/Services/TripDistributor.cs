@@ -1,3 +1,4 @@
+using Tut.Common.Models;
 using TutBackend.Repositories;
 
 namespace TutBackend.Services;
@@ -37,25 +38,27 @@ public class TripDistributor : BackgroundService
                 if (trip is null)
                 {
                     // Nothing to do right now - wait and retry
-                    await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken).ConfigureAwait(false);
+                    await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
                     continue;
                 }
 
                 _logger.LogInformation("Found unassigned trip {TripId}, finding best driver...", trip.Id);
 
                 // Use the injected DriverSelector to pick the best driver
-                var bestDriver = await _driverSelector.FindBestDriverAsync(trip, Array.Empty<int>(), driverLocationRepository, driverRepository).ConfigureAwait(false);
+                var bestDriver = await _driverSelector.FindBestDriverAsync(trip, [], driverLocationRepository, driverRepository).ConfigureAwait(false);
                 if (bestDriver is null)
                 {
                     _logger.LogInformation("No suitable driver found for trip {TripId}", trip.Id);
                     // Wait a bit before retrying so we don't tight-loop on the same trip
-                    await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken).ConfigureAwait(false);
+                    await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
                     continue;
                 }
 
                 // Assign driver and persist
                 trip.Driver = bestDriver;
-                await tripRepository.UpdateAsync(trip).ConfigureAwait(false);
+                bestDriver.State = DriverState.Requested;
+                await driverRepository.UpdateAsync(bestDriver);
+                await tripRepository.UpdateAsync(trip);
                 _logger.LogInformation("Assigned driver {DriverId} to trip {TripId}", bestDriver.Id, trip.Id);
 
                 // Small delay before processing next trip to avoid DB hot loop
