@@ -62,12 +62,13 @@ namespace TutBackend.Services;
                 IsValid = true,
                 Username = username
             };
-            
+            /*
             
             if (request is null) throw new ArgumentNullException(nameof(request));
             var resp = await _http.PostAsJsonAsync("/validate", request, cancellationToken).ConfigureAwait(false);
             resp.EnsureSuccessStatusCode();
             var result = await resp.Content.ReadFromJsonAsync<ValidateResponse>(cancellationToken: cancellationToken).ConfigureAwait(false);
             return result!;
+            */
         }
     }

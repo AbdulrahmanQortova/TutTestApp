@@ -7,10 +7,10 @@ using Grpc.Core;
 
 namespace Tut.Common.Managers;
 
-public class UserTripManager
+public class DriverTripManager
 {
-    private readonly IGUserTripService _userTripService;
-    private Channel<UserTripPacket>? _requestChannel;
+    private readonly IGDriverTripService _driverTripService;
+    private Channel<DriverTripPacket>? _requestChannel;
     private CancellationTokenSource? _cts;
     private Task? _receiveLoopTask;
 
@@ -18,50 +18,34 @@ public class UserTripManager
     private ConnectionState _connectionState = ConnectionState.Disconnected;
     private Trip? _currentTrip;
 
-    // Public read-only accessors
     public ConnectionState CurrentState
     {
-        get
-        {
-            lock (_stateLock) { return _connectionState; }
-        }
+        get { lock (_stateLock) { return _connectionState; } }
     }
 
     public Trip? CurrentTrip
     {
-        get
-        {
-            lock (_stateLock) { return _currentTrip; }
-        }
-        private set
-        {
-            lock (_stateLock) { _currentTrip = value; }
-        }
+        get { lock (_stateLock) { return _currentTrip; } }
+        private set { lock (_stateLock) { _currentTrip = value; } }
     }
 
     public event EventHandler<StatusUpdateEventArgs>? StatusChanged;
-    public event EventHandler<ErrorReceivedEventArgs>? ErrorReceived; 
-    public event EventHandler<NotificationReceivedEventArgs>? NotificationReceived;
-    public event EventHandler<DriverLocationsReceivedEventARg>? DriverLocationsReceived; 
+    public event EventHandler<StatusUpdateEventArgs>? OfferReceived;
+    public event EventHandler<ErrorReceivedEventArgs>? ErrorReceived;
     public event EventHandler<ConnectionStateChangedEventArgs>? ConnectionStateChanged;
 
-    public UserTripManager(
-        IGrpcChannelFactory channelFactory
-        )
+    public DriverTripManager(IGrpcChannelFactory channelFactory)
     {
         GrpcChannel grpcChannel = channelFactory.GetChannel();
-        _userTripService = grpcChannel.CreateGrpcService<IGUserTripService>();
-        
-
+        _driverTripService = grpcChannel.CreateGrpcService<IGDriverTripService>();
     }
-
 
     public async Task Connect(CancellationToken cancellationToken)
     {
         if (_requestChannel is not null)
             return; // already connected
 
-        _requestChannel = Channel.CreateBounded<UserTripPacket>(new BoundedChannelOptions(20)
+        _requestChannel = Channel.CreateBounded<DriverTripPacket>(new BoundedChannelOptions(20)
         {
             FullMode = BoundedChannelFullMode.DropOldest
         });
@@ -69,8 +53,6 @@ public class UserTripManager
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         CancellationToken linkedToken = _cts.Token;
 
-        // Start a background task that attempts to (re)connect and consumes server responses.
-        // On transient network errors we retry with exponential backoff + jitter.
         _receiveLoopTask = Task.Run(async () =>
         {
             int attempt = 0;
@@ -79,8 +61,6 @@ public class UserTripManager
                 while (!linkedToken.IsCancellationRequested)
                 {
                     attempt++;
-
-                    // Determine the intended connection state for this attempt
                     if (attempt == 1)
                         SetConnectionState(ConnectionState.Connecting);
                     else
@@ -88,51 +68,41 @@ public class UserTripManager
 
                     try
                     {
-                        // Create a fresh request enumerable for each connect attempt
                         var requestStream = _requestChannel!.Reader.ReadAllAsync(linkedToken);
-                        var responseStream = _userTripService.Connect(requestStream);
+                        var responseStream = _driverTripService.Connect(requestStream);
 
-                        // We successfully established a connection: reset attempt counter
                         attempt = 0;
 
-                        // Mark connected (we established the streaming call)
                         SetConnectionState(ConnectionState.Connected);
 
                         await foreach (var packet in responseStream.WithCancellation(linkedToken))
                         {
                             switch (packet.Type)
                             {
-                                case UserTripPacketType.Error:
+                                case DriverTripPacketType.Error:
                                     ErrorReceived?.Invoke(this, new ErrorReceivedEventArgs { ErrorText = packet.ErrorText });
                                     break;
-                                case UserTripPacketType.StatusUpdate:
-                                    // update the cached current trip and then notify listeners
+                                case DriverTripPacketType.StatusUpdate:
                                     CurrentTrip = packet.Trip;
                                     StatusChanged?.Invoke(this, new StatusUpdateEventArgs { Trip = packet.Trip });
                                     break;
-                                case UserTripPacketType.Notification:
-                                    NotificationReceived?.Invoke(this, new NotificationReceivedEventArgs { NotificationText = packet.NotificationText });
-                                    break;
-                                case UserTripPacketType.DriverLocationUpdate:
-                                    DriverLocationsReceived?.Invoke(this, new DriverLocationsReceivedEventARg { Locations = packet.DriverLocations });
+                                case DriverTripPacketType.OfferTrip:
+                                    CurrentTrip = packet.Trip;
+                                    OfferReceived?.Invoke(this, new StatusUpdateEventArgs { Trip = packet.Trip });
                                     break;
                             }
                         }
 
-                        // If the server gracefully closed the stream, break the loop and stop reconnecting
+                        // server closed stream gracefully
                         break;
                     }
                     catch (OperationCanceledException) when (linkedToken.IsCancellationRequested)
                     {
-                        // cancellation requested -> exit loop
                         break;
                     }
                     catch (RpcException rex) when (IsTransient(rex.StatusCode))
                     {
-                        // transient network error -> notify and retry with backoff
                         ErrorReceived?.Invoke(this, new ErrorReceivedEventArgs { ErrorText = $"Transient network error: {rex.Message}. Reconnecting..." });
-
-                        // Ensure the state reflects that we're about to retry
                         SetConnectionState(ConnectionState.Reconnecting);
 
                         int delayMs = ComputeBackoffMs(attempt);
@@ -144,18 +114,14 @@ public class UserTripManager
                         {
                             break;
                         }
-
-                        // retry on next loop iteration
                     }
                     catch (RpcException rex)
                     {
-                        // Non-transient RPC error -> surface and stop
                         ErrorReceived?.Invoke(this, new ErrorReceivedEventArgs { ErrorText = $"RPC error: {rex.Message}" });
                         break;
                     }
                     catch (Exception ex)
                     {
-                        // Unexpected error -> surface and stop
                         ErrorReceived?.Invoke(this, new ErrorReceivedEventArgs { ErrorText = ex.Message });
                         break;
                     }
@@ -163,7 +129,6 @@ public class UserTripManager
             }
             finally
             {
-                // Ensure request channel is completed when receive loop finishes
                 try
                 {
                     _requestChannel?.Writer.TryComplete();
@@ -173,7 +138,6 @@ public class UserTripManager
                     ErrorReceived?.Invoke(this, new ErrorReceivedEventArgs { ErrorText = ex.Message });
                 }
 
-                // Final state is Disconnected
                 SetConnectionState(ConnectionState.Disconnected);
             }
         }, CancellationToken.None);
@@ -216,36 +180,71 @@ public class UserTripManager
 
     private static int ComputeBackoffMs(int attempt)
     {
-        // exponential backoff base 500ms, cap at 8000ms, add jitter +/-20%
         if (attempt <= 0) attempt = 1;
-        double baseMs = 500.0 * Math.Pow(2.0, Math.Min(attempt - 1, 4)); // caps at 500*16 = 8000
+        double baseMs = 500.0 * Math.Pow(2.0, Math.Min(attempt - 1, 4));
         int capMs = 8000;
         int ms = (int)Math.Min(baseMs, capMs);
-        // Add jitter of up to +/-20%
-        double jitter = (Random.Shared.NextDouble() * 0.4) - 0.2; // [-0.2, +0.2]
+        double jitter = (Random.Shared.NextDouble() * 0.4) - 0.2;
         ms = (int)Math.Max(100, ms + ms * jitter);
         return ms;
     }
 
-    public async Task SendRequestTripAsync(Trip trip, CancellationToken cancellationToken = default)
+    public async Task SendPunchInAsync(CancellationToken cancellationToken = default)
     {
-        await SendAsync(new UserTripPacket
-        {
-            Type = UserTripPacketType.RequestTrip,
-            Trip = trip,
-        }, cancellationToken);
+        await SendAsync(new DriverTripPacket { Type = DriverTripPacketType.PunchIn }, cancellationToken);
     }
 
-    public async Task SendCancelTripAsync(CancellationToken cancellationToken = default)
+    public async Task SendPunchOutAsync(CancellationToken cancellationToken = default)
     {
-        await SendAsync(new UserTripPacket
-        {
-            Type = UserTripPacketType.CancelTrip
-        }, cancellationToken);
+        await SendAsync(new DriverTripPacket { Type = DriverTripPacketType.PunchOut }, cancellationToken);
     }
-    
-    
-    public async Task SendAsync(UserTripPacket packet, CancellationToken cancellationToken = default)
+
+    public async Task SendTripReceivedAsync(CancellationToken cancellationToken = default)
+    {
+        await SendAsync(new DriverTripPacket { Type = DriverTripPacketType.TripReceived, Trip = CurrentTrip }, cancellationToken);
+    }
+
+    public async Task SendAcceptTripAsync(CancellationToken cancellationToken = default)
+    {
+        await SendAsync(new DriverTripPacket { Type = DriverTripPacketType.AcceptTrip, Trip = CurrentTrip}, cancellationToken);
+    }
+
+    public async Task SendArrivedAtPickupAsync(CancellationToken cancellationToken = default)
+    {
+        await SendAsync(new DriverTripPacket { Type = DriverTripPacketType.ArrivedAtPickup, Trip = CurrentTrip}, cancellationToken);
+    }
+
+    public async Task SendStartTripAsync(CancellationToken cancellationToken = default)
+    {
+        await SendAsync(new DriverTripPacket { Type = DriverTripPacketType.StartTrip, Trip = CurrentTrip }, cancellationToken);
+    }
+
+    public async Task SendArrivedAtStopAsync(CancellationToken cancellationToken = default)
+    {
+        await SendAsync(new DriverTripPacket { Type = DriverTripPacketType.ArrivedAtStop, Trip = CurrentTrip }, cancellationToken);
+    }
+
+    public async Task SendContinueTripAsync(CancellationToken cancellationToken = default)
+    {
+        await SendAsync(new DriverTripPacket { Type = DriverTripPacketType.ContinueTrip, Trip = CurrentTrip }, cancellationToken);
+    }
+
+    public async Task SendArrivedAtDestinationAsync(CancellationToken cancellationToken = default)
+    {
+        await SendAsync(new DriverTripPacket { Type = DriverTripPacketType.ArrivedAtDestination, Trip = CurrentTrip }, cancellationToken);
+    }
+
+    public async Task SendCashPaymentMadeAsync(int amount, CancellationToken cancellationToken = default)
+    {
+        await SendAsync(new DriverTripPacket { Type = DriverTripPacketType.CashPaymentMade, Trip = CurrentTrip, PaymentAmount = amount }, cancellationToken);
+    }
+
+    public async Task SendGetStatusAsync(CancellationToken cancellationToken = default)
+    {
+        await SendAsync(new DriverTripPacket { Type = DriverTripPacketType.GetStatus }, cancellationToken);
+    }
+
+    public async Task SendAsync(DriverTripPacket packet, CancellationToken cancellationToken = default)
     {
         if (_requestChannel is null) throw new InvalidOperationException("Not connected");
         await _requestChannel.Writer.WriteAsync(packet, cancellationToken).ConfigureAwait(false);
@@ -253,7 +252,7 @@ public class UserTripManager
 
     public async Task Disconnect()
     {
-        if(_cts is not null)
+        if (_cts is not null)
             await _cts.CancelAsync();
         _requestChannel?.Writer.TryComplete();
         if (_receiveLoopTask is not null)
@@ -271,41 +270,6 @@ public class UserTripManager
         _cts?.Dispose();
         _cts = null;
 
-        // Ensure state is disconnected when explicitly disconnected
         SetConnectionState(ConnectionState.Disconnected);
     }
-
-
-}
-
-
-public enum ConnectionState
-{
-    Disconnected,
-    Connecting,
-    Connected,
-    Reconnecting
-}
-
-public class StatusUpdateEventArgs : EventArgs
-{
-    public Trip? Trip { get; set; }
-}
-public class ErrorReceivedEventArgs : EventArgs
-{
-    public string ErrorText { get; set; } = string.Empty;
-}
-public class NotificationReceivedEventArgs : EventArgs
-{
-    public string NotificationText { get; set; } = string.Empty;
-}
-public class DriverLocationsReceivedEventARg : EventArgs
-{
-    public List<GLocation> Locations { get; set; } = new();
-}
-
-public class ConnectionStateChangedEventArgs : EventArgs
-{
-    public ConnectionState OldState { get; set; }
-    public ConnectionState NewState { get; set; }
 }

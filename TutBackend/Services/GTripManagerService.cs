@@ -6,8 +6,8 @@ namespace TutBackend.Services;
 
 public class GTripManagerService(ITripRepository tripRepository,
     IUserRepository userRepository,
-    IDriverRepository driverRepository,
-    ILogger<GDriverManagerService> logger)
+    IDriverRepository driverRepository
+    )
     : IGTripManagerService
 {
 
