@@ -230,7 +230,7 @@ public class GDriverTripService(
     {
         if (_driverId == -1) return new DriverTripPacket();
         var scopedDriver = await scopedDriverRepo.GetByIdAsync(_driverId);
-        Trip? scopedTrip = _activeTripId == -1 ? null : await scopedTripRepo.GetByIdAsync(_activeTripId);
+        Trip? scopedTrip = _activeTripId == -1 ? null : await scopedTripRepo.GetActiveTripForDriver(_driverId);
         if (scopedDriver is null) return new DriverTripPacket();
         if (scopedDriver.State != DriverState.Requested)
         {
@@ -266,7 +266,7 @@ public class GDriverTripService(
             return new DriverTripPacket();
         }
         
-        var scopedTrip = await scopedTripRepo.GetByIdAsync(_activeTripId);
+        var scopedTrip = await scopedTripRepo.GetActiveTripForDriver(_driverId);
         if (scopedTrip is null)
         {
             logger.LogError("!!Driver {Driver} Accepted Trip but trip not found, TripId: {TripId}", scopedDriver.FullName, _activeTripId);
@@ -298,7 +298,7 @@ public class GDriverTripService(
             return new DriverTripPacket();
         }
         
-        var scopedTrip = await scopedTripRepo.GetByIdAsync(_activeTripId);
+        var scopedTrip = await scopedTripRepo.GetActiveTripForDriver(_driverId);
         if (scopedTrip is null)
         {
             logger.LogError("Driver {Driver} Reported Arrival but trip not found, TripId: {TripId}", scopedDriver.FullName, _activeTripId);
@@ -330,7 +330,7 @@ public class GDriverTripService(
             return new DriverTripPacket();
         }
         
-        var scopedTrip = await scopedTripRepo.GetByIdAsync(_activeTripId);
+        var scopedTrip = await scopedTripRepo.GetActiveTripForDriver(_driverId);
         if (scopedTrip is null)
         {
             logger.LogError("Driver {Driver} Started Trip but trip not found, TripId: {TripId}", scopedDriver.FullName, _activeTripId);
@@ -356,7 +356,7 @@ public class GDriverTripService(
             return new DriverTripPacket();
         }
 
-        var scopedTrip = await scopedTripRepo.GetByIdAsync(_activeTripId);
+        var scopedTrip = await scopedTripRepo.GetActiveTripForDriver(_driverId);
         if (scopedTrip is null)
         {
             logger.LogError("Driver {Driver} progressed Trip but trip not found, TripId: {TripId}", scopedDriver.FullName, _activeTripId);
@@ -427,7 +427,7 @@ public class GDriverTripService(
             return new DriverTripPacket();
         }
         
-        var scopedTrip = await scopedTripRepo.GetByIdAsync(_activeTripId);
+        var scopedTrip = await scopedTripRepo.GetActiveTripForDriver(_driverId);
         if (scopedTrip is null)
         {
             logger.LogError("Driver {Driver} Reported arrive at destination but trip not found, TripId: {TripId}", scopedDriver.FullName, _activeTripId);
@@ -456,7 +456,7 @@ public class GDriverTripService(
             return new DriverTripPacket();
         }
         
-        var scopedTrip = await scopedTripRepo.GetByIdAsync(_activeTripId);
+        var scopedTrip = await scopedTripRepo.GetActiveTripForDriver(_driverId);
         if (scopedTrip is null)
         {
             logger.LogError("Driver {Driver} ended Trip but trip not found, TripId: {TripId}", scopedDriver.FullName, _activeTripId);
@@ -512,7 +512,7 @@ public class GDriverTripService(
                 case DriverTripPacketType.GetStatus:
                 {
                     if (_activeTripId == -1) return DriverTripPacket.StatusUpdate(null);
-                    var scopedTrip = await scopedTripRepo.GetByIdAsync(_activeTripId);
+                    var scopedTrip = await scopedTripRepo.GetActiveTripForDriver(_driverId);
                     return DriverTripPacket.StatusUpdate(scopedTrip);
                 }
 
