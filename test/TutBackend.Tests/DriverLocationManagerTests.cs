@@ -14,16 +14,13 @@ public class DriverLocationManagerTests
 
         public Task RegisterLocation(IAsyncEnumerable<GLocation> locations, global::ProtoBuf.Grpc.CallContext context = default)
         {
-            _ = Task.Run(async () =>
+            var t = Task.Run(async () =>
             {
                 try
                 {
                     await foreach (var loc in locations)
                     {
-                        int x = 0;
                         await ReceivedLocations.Writer.WriteAsync(loc);
-                        x++;
-                        if (x > 1) x = x;
                     }
                 }
                 catch (Exception ex)
@@ -37,7 +34,7 @@ public class DriverLocationManagerTests
                 }
             });
 
-            return Task.CompletedTask;
+            return t;
         }
 
         public Task<List<DriverLocation>> GetDriverLocations()

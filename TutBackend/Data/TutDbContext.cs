@@ -17,9 +17,7 @@ public class TutDbContext : DbContext
         if (!optionsBuilder.IsConfigured)
         {
             string connectionString = Program.ConnectionString;
-            Console.WriteLine(connectionString);
             optionsBuilder.UseSqlServer(connectionString)
-                .EnableSensitiveDataLogging()
                 .EnableDetailedErrors();
         }
     }

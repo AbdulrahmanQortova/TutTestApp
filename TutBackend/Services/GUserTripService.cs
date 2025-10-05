@@ -1,7 +1,6 @@
 using Grpc.Core;
 using ProtoBuf.Grpc;
 using System.Threading.Channels;
-using Microsoft.Extensions.DependencyInjection;
 using Tut.Common.GServices;
 using Tut.Common.Models;
 using Tut.Common.Utils;
@@ -10,7 +9,6 @@ namespace TutBackend.Services;
 
 public class GUserTripService(
     IUserRepository userRepository,
-    ITripRepository tripRepository,
     QipClient qipClient,
     IServiceScopeFactory scopeFactory,
     ILogger<GDriverManagerService> logger
@@ -19,14 +17,17 @@ public class GUserTripService(
 {
 
     private Channel<UserTripPacket>? _responseChannel;
-    private User? _user;
+    // store ids only to avoid holding entity instances across threads
+    private int _userId = -1; // -1 indicates no authenticated user
     private readonly CancellationTokenSource _cancellation = new ();
-    private Trip? _activeTrip;
+    // no lingering entity references; we fetch fresh entities from scoped repos
+    private int _activeTripId = -1; // -1 indicates no active trip tracked
 
     public async IAsyncEnumerable<UserTripPacket> Connect(IAsyncEnumerable<UserTripPacket> requestPackets, CallContext context = default)
     {
         User? user = await AuthUtils.AuthorizeUser(context, userRepository, qipClient);
-        _user = user ?? throw new RpcException(new Status(StatusCode.Unauthenticated, "Unauthorized"));
+        var resolvedUser = user ?? throw new RpcException(new Status(StatusCode.Unauthenticated, "Unauthorized"));
+        _userId = resolvedUser.Id;
 
 
         _responseChannel = Channel.CreateBounded<UserTripPacket>(new BoundedChannelOptions(20)
@@ -36,28 +37,28 @@ public class GUserTripService(
 
         // Background task: consume incoming request packets and act on them.
         _ = Task.Run(async () =>
-        {
-            try
-            {
-                await foreach (var packet in requestPackets.WithCancellation(_cancellation.Token))
-                {
-                    UserTripPacket res = await DispatchIncomingPacket(packet, scopeFactory, _cancellation.Token);
-                    await _responseChannel.Writer.WriteAsync(res, _cancellation.Token);
-                }
-            }
-            catch (OperationCanceledException) when (_cancellation.IsCancellationRequested)
-            {
-                // expected cancellation
-            }
-            catch (Exception)
-            {
-                // Swallow all other exceptions
-            }
-            await _cancellation.CancelAsync();
-            _cancellation.Dispose();
+         {
+             try
+             {
+                 await foreach (var packet in requestPackets.WithCancellation(_cancellation.Token))
+                 {
+                    UserTripPacket res = await DispatchIncomingPacket(packet);
+                     await _responseChannel.Writer.WriteAsync(res, _cancellation.Token);
+                 }
+             }
+             catch (OperationCanceledException) when (_cancellation.IsCancellationRequested)
+             {
+                 // expected cancellation
+             }
+             catch (Exception)
+             {
+                 // Swallow all other exceptions
+             }
+             await _cancellation.CancelAsync();
+             _cancellation.Dispose();
         }, CancellationToken.None);
 
-        _ = Task.Run(() => ReportTripStatusUpdates(scopeFactory, _cancellation.Token), CancellationToken.None);
+        _ = Task.Run(() => ReportTripStatusUpdates(_cancellation.Token), CancellationToken.None);
 
         // Subscribe to response channel and yield packets as they become available
         var reader = _responseChannel.Reader;
@@ -84,40 +85,39 @@ public class GUserTripService(
     {
         // Do nothing for now
     }
-    public Task<UserTripPacket> GetState()
+    public async Task<UserTripPacket> GetState()
     {
-        return Task.FromResult(UserTripPacket.StatusUpdate(_activeTrip));
+        // Return fresh state by resolving the active trip from a scoped repository
+        if (_userId == -1) return UserTripPacket.Error("Unauthorized");
+        using var scope = scopeFactory.CreateScope();
+        var scopedTripRepo = scope.ServiceProvider.GetRequiredService<ITripRepository>();
+        Trip? trip;
+        if (_activeTripId != -1)
+        {
+            trip = await scopedTripRepo.GetByIdAsync(_activeTripId);
+        }
+        else
+        {
+            trip = await scopedTripRepo.GetActiveTripForUser(_userId);
+        }
+        return UserTripPacket.StatusUpdate(trip);
     }
 
 
-    private async Task ReportTripStatusUpdates(IServiceScopeFactory scopeFactory, CancellationToken cancellationToken)
+    private async Task ReportTripStatusUpdates(CancellationToken cancellationToken)
     {
         TripState lastCommunicatedState = TripState.Unspecified;
         while (!cancellationToken.IsCancellationRequested)
         {
-            await Task.Delay(1000, cancellationToken);
-            if (_user is null) continue;
+            await Task.Delay(10, cancellationToken);
+            if (_userId == -1) continue;
             if (_responseChannel is null) continue;
 
             try
             {
                 using var scope = scopeFactory.CreateScope();
                 var scopedTripRepo = scope.ServiceProvider.GetRequiredService<ITripRepository>();
-
-                _activeTrip = await scopedTripRepo.GetActiveTripForUser(_user.Id);
-                if (_activeTrip is null)
-                {
-                    if(lastCommunicatedState == TripState.Unspecified) continue;
-                    await _responseChannel.Writer.WriteAsync(UserTripPacket.StatusUpdate(_activeTrip), cancellationToken);
-                    _activeTrip = null;
-                    lastCommunicatedState = TripState.Unspecified;
-                    break;
-                }
-
-                if (_activeTrip.Status == lastCommunicatedState) continue;
-
-                await _responseChannel.Writer.WriteAsync(UserTripPacket.StatusUpdate(_activeTrip), cancellationToken);
-                lastCommunicatedState = _activeTrip.Status;
+                lastCommunicatedState = await ProcessAndWriteTripStatusAsync(scopedTripRepo, cancellationToken, lastCommunicatedState);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -131,35 +131,74 @@ public class GUserTripService(
 
     }
 
+    // Extracted helper to process trip reporting for cognitive complexity reasons.
+    private async Task<TripState> ProcessAndWriteTripStatusAsync(ITripRepository scopedTripRepo, CancellationToken cancellationToken, TripState lastCommunicatedState)
+    {
+        var currentTrip = await scopedTripRepo.GetActiveTripForUser(_userId);
+
+        if (currentTrip is not null)
+        {
+            if (currentTrip.Status != lastCommunicatedState)
+            {
+                await _responseChannel!.Writer.WriteAsync(UserTripPacket.StatusUpdate(currentTrip), cancellationToken);
+                lastCommunicatedState = currentTrip.Status;
+            }
+            _activeTripId = currentTrip.Id;
+            return lastCommunicatedState;
+        }
+
+        // no active trip
+        if (lastCommunicatedState == TripState.Unspecified) return lastCommunicatedState;
+        await _responseChannel!.Writer.WriteAsync(UserTripPacket.StatusUpdate(null), cancellationToken);
+        _activeTripId = -1;
+        return TripState.Unspecified;
+    }
+
     private async Task<UserTripPacket> HandleRequestTripAsync(ITripRepository scopedTripRepo, IUserRepository scopedUserRepo, UserTripPacket packet)
     {
         if (packet.Trip is null) return new UserTripPacket();
-        _activeTrip = packet.Trip;
-        User? user = await scopedUserRepo.GetByIdAsync(_user!.Id);
-        _activeTrip.User = user!;
-        Trip? prevTrip = await tripRepository.GetActiveTripForUser(user!.Id);
+        // Use fresh user entity from scoped repo and avoid storing trip entity globally
+        User? user = await scopedUserRepo.GetByIdAsync(_userId);
+        packet.Trip.User = user!;
+        Trip? prevTrip = await scopedTripRepo.GetActiveTripForUser(user!.Id);
         if (prevTrip is not null)
             return UserTripPacket.Error("User already has an active trip");
-        await scopedTripRepo.AddAsync(_activeTrip);
+        var tripToAdd = packet.Trip;
+        await scopedTripRepo.AddAsync(tripToAdd);
+        _activeTripId = tripToAdd.Id;
         return new UserTripPacket();
     }
     
-    private async Task<UserTripPacket> HandleCancelTripAsync(ITripRepository scopedTripRepo, UserTripPacket packet)
+    private async Task<UserTripPacket> HandleCancelTripAsync(ITripRepository scopedTripRepo)
     {
-        if (_user is null) return new UserTripPacket();
-        if (_activeTrip is null)
+        if (_userId == -1) return new UserTripPacket();
+
+        var currentTrip = await scopedTripRepo.GetActiveTripForUser(_userId);
+        if (currentTrip is null)
         {
-            logger.LogError("User {User} Cancelled Trip while there are no active trip for him", _user.FullName);
+            // try to get user full name for logging if possible
+            try
+            {
+                using var scope = scopeFactory.CreateScope();
+                var scopedUserRepo = scope.ServiceProvider.GetRequiredService<IUserRepository>();
+                var u = await scopedUserRepo.GetByIdAsync(_userId);
+                logger.LogError("User {User} Cancelled Trip while there are no active trip for him", u?.FullName ?? _userId.ToString());
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "User {UserId} Cancelled Trip while there are no active trip for him", _userId);
+            }
             return new UserTripPacket();
         }
 
-        _activeTrip.Status = TripState.Canceled;
-        _activeTrip.CancelTime = DateTime.UtcNow;
-        await scopedTripRepo.UpdateAsync(_activeTrip);
-        return UserTripPacket.StatusUpdate(_activeTrip);
+        currentTrip.Status = TripState.Canceled;
+        currentTrip.CancelTime = DateTime.UtcNow;
+        await scopedTripRepo.UpdateAsync(currentTrip);
+        _activeTripId = -1;
+        return UserTripPacket.StatusUpdate(currentTrip);
     }
     
-    private async Task<UserTripPacket> DispatchIncomingPacket(UserTripPacket packet, IServiceScopeFactory scopeFactory, CancellationToken cancellationToken = default)
+    private async Task<UserTripPacket> DispatchIncomingPacket(UserTripPacket packet)
     {
         try
         {
@@ -170,11 +209,22 @@ public class GUserTripService(
             switch (packet.Type)
             {
                 case UserTripPacketType.GetStatus:
-                    return UserTripPacket.StatusUpdate(_activeTrip);
+                    // Resolve a fresh trip for status
+                    if (_userId == -1) return UserTripPacket.Error("Unauthorized");
+                    Trip? trip;
+                    if (_activeTripId != -1)
+                    {
+                        trip = await scopedTripRepo.GetByIdAsync(_activeTripId);
+                    }
+                    else
+                    {
+                        trip = await scopedTripRepo.GetActiveTripForUser(_userId);
+                    }
+                    return UserTripPacket.StatusUpdate(trip);
                 case UserTripPacketType.RequestTrip:
                     return await HandleRequestTripAsync(scopedTripRepo, scopedUserRepo, packet);
                 case UserTripPacketType.CancelTrip:
-                    return await HandleCancelTripAsync(scopedTripRepo, packet);
+                    return await HandleCancelTripAsync(scopedTripRepo);
                 default:
                     // Unknown packet
                     logger.LogError("Unknown Packet Type: {Packet}", packet.ToJson());
