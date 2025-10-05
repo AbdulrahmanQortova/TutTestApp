@@ -39,19 +39,19 @@ public class DriverAgent
         // Initialize state handlers
         var handlers = new Dictionary<TripState, Func<Trip, CancellationToken, Task>>
         {
-            { TripState.Accepted, async (t, ct) => await HandleAcceptedAsync(t, ct).ConfigureAwait(false) },
-            { TripState.DriverArrived, async (t, ct) => await HandleDriverArrivedAsync(t, ct).ConfigureAwait(false) },
-            { TripState.AtStop1, async (_, ct) => await HandleAtStopsAsync(ct).ConfigureAwait(false) },
-            { TripState.AtStop2, async (_, ct) => await HandleAtStopsAsync(ct).ConfigureAwait(false) },
-            { TripState.AtStop3, async (_, ct) => await HandleAtStopsAsync(ct).ConfigureAwait(false) },
-            { TripState.AtStop4, async (_, ct) => await HandleAtStopsAsync(ct).ConfigureAwait(false) },
-            { TripState.AtStop5, async (_, ct) => await HandleAtStopsAsync(ct).ConfigureAwait(false) },
-            { TripState.AfterStop1, async (t, ct) => await HandleMoveAndMaybeStopAsync(t, 2, 3, ct).ConfigureAwait(false) },
-            { TripState.AfterStop2, async (t, ct) => await HandleMoveAndMaybeStopAsync(t, 3, 4, ct).ConfigureAwait(false) },
-            { TripState.AfterStop3, async (t, ct) => await HandleMoveAndMaybeStopAsync(t, 4, 5, ct).ConfigureAwait(false) },
-            { TripState.AfterStop4, async (t, ct) => await HandleMoveAndMaybeStopAsync(t, 5, 6, ct).ConfigureAwait(false) },
-            { TripState.AfterStop5, async (t, ct) => { await SafeMoveToIndexAsync(t, 6, ct).ConfigureAwait(false); if (!ct.IsCancellationRequested) await _tripManager.SendArrivedAtDestinationAsync(ct).ConfigureAwait(false); } },
-            { TripState.Arrived, async (t, ct) => await HandleArrivedAsync(t, ct).ConfigureAwait(false) }
+            { TripState.Accepted, async (t, ct) => await HandleAcceptedAsync(t, ct) },
+            { TripState.DriverArrived, async (t, ct) => await HandleDriverArrivedAsync(t, ct) },
+            { TripState.AtStop1, async (_, ct) => await HandleAtStopsAsync(ct) },
+            { TripState.AtStop2, async (_, ct) => await HandleAtStopsAsync(ct) },
+            { TripState.AtStop3, async (_, ct) => await HandleAtStopsAsync(ct) },
+            { TripState.AtStop4, async (_, ct) => await HandleAtStopsAsync(ct) },
+            { TripState.AtStop5, async (_, ct) => await HandleAtStopsAsync(ct) },
+            { TripState.AfterStop1, async (t, ct) => await HandleMoveAndMaybeStopAsync(t, 2, 3, ct) },
+            { TripState.AfterStop2, async (t, ct) => await HandleMoveAndMaybeStopAsync(t, 3, 4, ct) },
+            { TripState.AfterStop3, async (t, ct) => await HandleMoveAndMaybeStopAsync(t, 4, 5, ct) },
+            { TripState.AfterStop4, async (t, ct) => await HandleMoveAndMaybeStopAsync(t, 5, 6, ct) },
+            { TripState.AfterStop5, async (t, ct) => { await SafeMoveToIndexAsync(t, 6, ct); if (!ct.IsCancellationRequested) await _tripManager.SendArrivedAtDestinationAsync(ct); } },
+            { TripState.Arrived, async (t, ct) => await HandleArrivedAsync(t, ct) }
         };
 
         _stateHandlers = handlers;
@@ -69,7 +69,7 @@ public class DriverAgent
         _tripManager.OfferReceived += (_, _) => _ = HandleOfferAsync();
 
         // Invoke status updates as fire-and-forget. Use async void event handler to avoid discard assignment.
-        _tripManager.StatusChanged += async (_, e) => await HandleStatusUpdate(e.Trip).ConfigureAwait(false);
+        _tripManager.StatusChanged += async (_, e) => await HandleStatusUpdate(e.Trip);
 
         // Start background connection tasks and keep references so they are not unobserved.
         _locationConnectTask = _locationManager.Connect(_runCts.Token, TimeSpan.FromSeconds(2))
@@ -108,7 +108,7 @@ public class DriverAgent
             {
                 try
                 {
-                    await _wanderCts.CancelAsync().ConfigureAwait(false);
+                    await _wanderCts.CancelAsync();
                 }
                 catch (ObjectDisposedException)
                 {
@@ -130,9 +130,11 @@ public class DriverAgent
                 _wanderCts = null;
             }
 
+            Console.WriteLine($"DA({_tripManager.CurrentTrip?.Driver?.Id})> Sending Ack");
             await _tripManager.SendTripReceivedAsync();
-            await Task.Delay(2000).ConfigureAwait(false);
-            await _tripManager.SendAcceptTripAsync().ConfigureAwait(false);
+            await Task.Delay(2000);
+            Console.WriteLine($"DA({_tripManager.CurrentTrip?.Driver?.Id})> Sending Accept");
+            await _tripManager.SendAcceptTripAsync();
         }
         catch (Exception ex)
         {
@@ -157,7 +159,7 @@ public class DriverAgent
         }
 
         // Delegate the detailed status processing to keep this method simple.
-        await ProcessTripStatusAsync(trip, ct).ConfigureAwait(false);
+        await ProcessTripStatusAsync(trip, ct);
     }
 
     private async Task ProcessTripStatusAsync(Trip trip, CancellationToken ct)
@@ -166,7 +168,7 @@ public class DriverAgent
         {
             if (_stateHandlers.TryGetValue(trip.Status, out var handler))
             {
-                await handler(trip, ct).ConfigureAwait(false);
+                await handler(trip, ct);
             }
         }
         catch (OperationCanceledException)
@@ -198,40 +200,40 @@ public class DriverAgent
 
     private async Task HandleMoveAndMaybeStopAsync(Trip trip, int moveIndex, int minStopsForStop, CancellationToken ct)
     {
-        await SafeMoveToIndexAsync(trip, moveIndex, ct).ConfigureAwait(false);
+        await SafeMoveToIndexAsync(trip, moveIndex, ct);
         if (!ct.IsCancellationRequested)
-            await SendArriveOrStopAsync(trip, minStopsForStop, ct).ConfigureAwait(false);
+            await SendArriveOrStopAsync(trip, minStopsForStop, ct);
     }
 
     private async Task HandleAcceptedAsync(Trip trip, CancellationToken ct)
     {
-        await SafeMoveToIndexAsync(trip, 0, ct).ConfigureAwait(false);
+        await SafeMoveToIndexAsync(trip, 0, ct);
         if (!ct.IsCancellationRequested)
-            await _tripManager.SendArrivedAtPickupAsync(ct).ConfigureAwait(false);
+            await _tripManager.SendArrivedAtPickupAsync(ct);
     }
 
     private async Task HandleDriverArrivedAsync(Trip trip, CancellationToken ct)
     {
-        await Task.Delay(TimeSpan.FromSeconds(_options.ArrivalWaitTimeSeconds), ct).ConfigureAwait(false);
+        await Task.Delay(TimeSpan.FromSeconds(_options.ArrivalWaitTimeSeconds), ct);
         if (!ct.IsCancellationRequested)
-            await SafeMoveToIndexAsync(trip, 1, ct).ConfigureAwait(false);
+            await SafeMoveToIndexAsync(trip, 1, ct);
         if (!ct.IsCancellationRequested)
-            await SendArriveOrStopAsync(trip, 2, ct).ConfigureAwait(false);
+            await SendArriveOrStopAsync(trip, 2, ct);
     }
 
     private async Task HandleAtStopsAsync(CancellationToken ct)
     {
-        await Task.Delay(TimeSpan.FromSeconds(_options.StopWaitTimeSeconds), ct).ConfigureAwait(false);
+        await Task.Delay(TimeSpan.FromSeconds(_options.StopWaitTimeSeconds), ct);
         if (!ct.IsCancellationRequested)
-            await _tripManager.SendContinueTripAsync(ct).ConfigureAwait(false);
+            await _tripManager.SendContinueTripAsync(ct);
     }
 
     private async Task HandleArrivedAsync(Trip trip, CancellationToken ct)
     {
         if (!ct.IsCancellationRequested)
-            await Task.Delay(TimeSpan.FromSeconds(_options.PaymentWaitTimeSeconds), ct).ConfigureAwait(false);
+            await Task.Delay(TimeSpan.FromSeconds(_options.PaymentWaitTimeSeconds), ct);
         if (!ct.IsCancellationRequested)
-            await _tripManager.SendCashPaymentMadeAsync((int)trip.ActualCost, ct).ConfigureAwait(false);
+            await _tripManager.SendCashPaymentMadeAsync((int)trip.ActualCost, ct);
     }
 
     public void Stop()
@@ -278,7 +280,7 @@ public class DriverAgent
             while (!ct.IsCancellationRequested)
             {
                 GLocation destLocation = RandomLocationInside(_options.WanderBottomLeft, _options.WanderTopRight);
-                await MoveTo(destLocation, ct).ConfigureAwait(false);
+                await MoveTo(destLocation, ct);
             }
         }
         catch (OperationCanceledException)
@@ -298,7 +300,7 @@ public class DriverAgent
         {
             while (!ct.IsCancellationRequested && !LocationUtils.SameLocation(_currentLocation, destLocation))
             {
-                await StepTowards(destLocation, _options.Speed, ct).ConfigureAwait(false);
+                await StepTowards(destLocation, _options.Speed, ct);
             }
         }
         catch (OperationCanceledException)
@@ -330,10 +332,10 @@ public class DriverAgent
         _currentLocation.Speed = speed;
         _currentLocation.Timestamp = DateTime.UtcNow;
 
-        await NotifyLocationChanged().ConfigureAwait(false);
+        await NotifyLocationChanged();
 
         // Simulate the passage of 5 seconds for this step
-        await Task.Delay(TimeSpan.FromSeconds(5), ct).ConfigureAwait(false);
+        await Task.Delay(TimeSpan.FromSeconds(5), ct);
     }
 
 

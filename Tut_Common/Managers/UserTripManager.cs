@@ -256,7 +256,7 @@ public class UserTripManager
     public async Task SendAsync(UserTripPacket packet, CancellationToken cancellationToken = default)
     {
         if (_requestChannel is null) throw new InvalidOperationException("Not connected");
-        await _requestChannel.Writer.WriteAsync(packet, cancellationToken).ConfigureAwait(false);
+        await _requestChannel.Writer.WriteAsync(packet, cancellationToken);
     }
 
     public async Task Disconnect()
@@ -268,7 +268,7 @@ public class UserTripManager
         {
             try
             {
-                await _receiveLoopTask.ConfigureAwait(false);
+                await _receiveLoopTask;
             }
             catch (Exception ex)
             {

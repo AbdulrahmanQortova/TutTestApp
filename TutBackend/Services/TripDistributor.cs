@@ -18,7 +18,7 @@ public class TripDistributor : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await DistributionLoop(stoppingToken).ConfigureAwait(false);
+        await DistributionLoop(stoppingToken);
     }
 
     private async Task DistributionLoop(CancellationToken cancellationToken)
@@ -62,7 +62,7 @@ public class TripDistributor : BackgroundService
                 _logger.LogInformation("Assigned driver {DriverId} to trip {TripId}", bestDriver.Id, trip.Id);
 
                 // Small delay before processing next trip to avoid DB hot loop
-                await Task.Delay(TimeSpan.FromMilliseconds(200), cancellationToken).ConfigureAwait(false);
+                await Task.Delay(TimeSpan.FromMilliseconds(200), cancellationToken);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -75,7 +75,7 @@ public class TripDistributor : BackgroundService
                 // Backoff on error
                 try
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken).ConfigureAwait(false);
+                    await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {

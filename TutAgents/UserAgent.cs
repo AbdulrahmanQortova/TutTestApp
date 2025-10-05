@@ -46,12 +46,7 @@ public class UserAgent
             Console.WriteLine("UA> No active trip");
             return;
         }
-
-        Console.WriteLine($"UA> Status changed: TripId={trip.Id} State={trip.Status}");
-        if (trip.Status == TripState.Ended || trip.Status == TripState.Canceled)
-        {
-            Console.WriteLine($"UA> Trip {trip.Id} ended with status {trip.Status}");
-        }
+        Console.WriteLine($"UA> Status changed: TripId={trip.Id} State={trip.Status} Driver={trip.Driver?.Id} / {trip.Driver?.State}");
     }
 
     public void Stop()

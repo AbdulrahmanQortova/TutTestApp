@@ -160,7 +160,7 @@ public class GDriverTripService(
     {
         // Fetch fresh driver to check current state
         var scopedDriver = await scopedDriverRepo.GetByIdAsync(_driverId);
-        if (scopedDriver is null || scopedDriver.State != DriverState.Available) return;
+        if (scopedDriver is null || scopedDriver.State != DriverState.Requested) return;
 
         Trip? trip = await scopedTripRepo.GetActiveTripForDriver(_driverId);
 
@@ -172,11 +172,12 @@ public class GDriverTripService(
             return;
         }
 
-        if (trip.Id != _tripIdOffered || trip.Status != TripState.Requested)
+        if (trip.Status != TripState.Requested)
         {
             _offerSent = false;
             _tripIdOffered = 0;
             _offerSentTimeStamp = DateTime.MinValue;
+            return;
         }
 
         if (!_offerSent || _offerSentTimeStamp.AddMinutes(1) <= DateTime.UtcNow)
@@ -256,23 +257,23 @@ public class GDriverTripService(
         if (scopedDriver is null) return new DriverTripPacket();
         if (scopedDriver.State != DriverState.Requested)
         {
-            logger.LogError("Driver {Driver} Accepted Trip Received while he is in State: {State}", scopedDriver.FullName, scopedDriver.State.ToString());
+            logger.LogError("!!Driver {Driver} Accepted Trip while he is in State: {State}", scopedDriver.FullName, scopedDriver.State.ToString());
             return new DriverTripPacket();
         }
         if (_activeTripId == -1)
         {
-            logger.LogError("Driver {Driver} Accepted Trip while there are no active trip for him", scopedDriver.FullName);
+            logger.LogError("!!Driver {Driver} Accepted Trip while there are no active trip for him", scopedDriver.FullName);
             return new DriverTripPacket();
         }
         
         var scopedTrip = await scopedTripRepo.GetByIdAsync(_activeTripId);
         if (scopedTrip is null)
         {
-            logger.LogError("Driver {Driver} Accepted Trip but trip not found, TripId: {TripId}", scopedDriver.FullName, _activeTripId);
+            logger.LogError("!!Driver {Driver} Accepted Trip but trip not found, TripId: {TripId}", scopedDriver.FullName, _activeTripId);
             return new DriverTripPacket();
         }
         
-        logger.LogDebug("Driver {Driver} Accepted Trip {Trip}", scopedDriver.FullName, scopedTrip.Id);
+        logger.LogDebug("!!Driver {Driver} Accepted Trip {Trip}", scopedDriver.FullName, scopedTrip.Id);
 
         scopedDriver.State = DriverState.EnRoute;
         await scopedDriverRepo.UpdateAsync(scopedDriver);

@@ -21,54 +21,44 @@ namespace TutBackend.Services;
         public async Task<HttpResponseMessage> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
         {
             if (request is null) throw new ArgumentNullException(nameof(request));
-            return await _http.PostAsJsonAsync("/register", request, cancellationToken).ConfigureAwait(false);
+            return await _http.PostAsJsonAsync("/register", request, cancellationToken);
         }
 
         public async Task<TokenResponse> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
         {
             if (request is null) throw new ArgumentNullException(nameof(request));
-            var resp = await _http.PostAsJsonAsync("/login", request, cancellationToken).ConfigureAwait(false);
+            var resp = await _http.PostAsJsonAsync("/login", request, cancellationToken);
             resp.EnsureSuccessStatusCode();
-            var token = await resp.Content.ReadFromJsonAsync<TokenResponse>(cancellationToken: cancellationToken).ConfigureAwait(false);
+            var token = await resp.Content.ReadFromJsonAsync<TokenResponse>(cancellationToken: cancellationToken);
             return token!;
         }
 
         public async Task<TokenResponse> RefreshAsync(RefreshRequest request, CancellationToken cancellationToken = default)
         {
             if (request is null) throw new ArgumentNullException(nameof(request));
-            var resp = await _http.PostAsJsonAsync("/refresh", request, cancellationToken).ConfigureAwait(false);
+            var resp = await _http.PostAsJsonAsync("/refresh", request, cancellationToken);
             resp.EnsureSuccessStatusCode();
-            var token = await resp.Content.ReadFromJsonAsync<TokenResponse>(cancellationToken: cancellationToken).ConfigureAwait(false);
+            var token = await resp.Content.ReadFromJsonAsync<TokenResponse>(cancellationToken: cancellationToken);
             return token!;
         }
 
         public async Task<HttpResponseMessage> LogoutAsync(RefreshRequest request, CancellationToken cancellationToken = default)
         {
             if (request is null) throw new ArgumentNullException(nameof(request));
-            return await _http.PostAsJsonAsync("/logout", request, cancellationToken).ConfigureAwait(false);
+            return await _http.PostAsJsonAsync("/logout", request, cancellationToken);
         }
 
-        public async Task<ValidateResponse> ValidateAsync(ValidateRequest request, CancellationToken cancellationToken = default)
+        public Task<ValidateResponse> ValidateAsync(ValidateRequest request, CancellationToken cancellationToken = default)
         {
+            if (request is null) throw new ArgumentNullException(nameof(request));
+
             // Shortcut validation for development
             if (string.IsNullOrEmpty(request.Token))
-                return new ValidateResponse
-                {
-                    IsValid = false
-                };
-            string username = request.Token[7..];
-            return new ValidateResponse
             {
-                IsValid = true,
-                Username = username
-            };
-            /*
-            
-            if (request is null) throw new ArgumentNullException(nameof(request));
-            var resp = await _http.PostAsJsonAsync("/validate", request, cancellationToken).ConfigureAwait(false);
-            resp.EnsureSuccessStatusCode();
-            var result = await resp.Content.ReadFromJsonAsync<ValidateResponse>(cancellationToken: cancellationToken).ConfigureAwait(false);
-            return result!;
-            */
+                return Task.FromResult(new ValidateResponse { IsValid = false });
+            }
+
+            string username = request.Token[7..];
+            return Task.FromResult(new ValidateResponse { IsValid = true, Username = username });
         }
     }

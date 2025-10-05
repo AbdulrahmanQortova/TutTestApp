@@ -152,7 +152,7 @@ public class DriverLocationManagerService
                 {
                     try
                     {
-                        await _requestChannel!.Writer.WriteAsync(loc, linkedToken).ConfigureAwait(false);
+                        await _requestChannel!.Writer.WriteAsync(loc, linkedToken);
                     }
                     catch (OperationCanceledException) when (linkedToken.IsCancellationRequested)
                     {
@@ -189,7 +189,7 @@ public class DriverLocationManagerService
         {
             try
             {
-                await _sendLoopTask.ConfigureAwait(false);
+                await _sendLoopTask;
             }
             catch (Exception ex)
             {
@@ -201,7 +201,7 @@ public class DriverLocationManagerService
         {
             try
             {
-                await _registerTask.ConfigureAwait(false);
+                await _registerTask;
             }
             catch (Exception ex)
             {

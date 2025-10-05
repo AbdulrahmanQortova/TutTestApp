@@ -252,7 +252,7 @@ public class DriverTripManager
     public async Task SendAsync(DriverTripPacket packet, CancellationToken cancellationToken = default)
     {
         if (_requestChannel is null) throw new InvalidOperationException("Not connected");
-        await _requestChannel.Writer.WriteAsync(packet, cancellationToken).ConfigureAwait(false);
+        await _requestChannel.Writer.WriteAsync(packet, cancellationToken);
     }
 
     public async Task Disconnect()
@@ -264,7 +264,7 @@ public class DriverTripManager
         {
             try
             {
-                await _receiveLoopTask.ConfigureAwait(false);
+                await _receiveLoopTask;
             }
             catch (Exception ex)
             {
