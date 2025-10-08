@@ -11,27 +11,27 @@ public class GTripManagerService(ITripRepository tripRepository,
     : IGTripManagerService
 {
 
-    public async Task<List<Trip>> GetAllTrips(GPartialListRequest request)
+    public async Task<TripList> GetAllTrips(GPartialListRequest request)
     {
-        return await tripRepository.GetAllTripsAsync(request.Take, request.Skip);
+        return new TripList(await tripRepository.GetAllTripsAsync(request.Take, request.Skip));
     }
-    public async Task<List<Trip>> GetAllActiveTrips(GPartialListRequest request)
+    public async Task<TripList> GetAllActiveTrips(GPartialListRequest request)
     {
-        return await tripRepository.GetActiveTripsAsync(request.Take, request.Skip);
+        return new TripList(await tripRepository.GetActiveTripsAsync(request.Take, request.Skip));
     }
-    public async Task<List<Trip>> GetTripsForUser(GPartialListIdRequest request)
+    public async Task<TripList> GetTripsForUser(GPartialListIdRequest request)
     {
         User? user = await userRepository.GetByIdAsync(request.Id);
         if(user is null) 
             throw new RpcException(new Status(StatusCode.NotFound, $"User not found with id: {request.Id}"));
-        return await tripRepository.GetTripsForUser(user.Id, request.Take, request.Skip);
+        return new TripList(await tripRepository.GetTripsForUser(user.Id, request.Take, request.Skip));
     }
-    public async Task<List<Trip>> GetTripsForDriver(GPartialListIdRequest request)
+    public async Task<TripList> GetTripsForDriver(GPartialListIdRequest request)
     {
         Driver? driver = await driverRepository.GetByIdAsync(request.Id);
         if(driver is null) 
             throw new RpcException(new Status(StatusCode.NotFound, $"Driver not found with id: {request.Id}"));
-        return await tripRepository.GetTripsForDriver(driver.Id, request.Take, request.Skip);
+        return new TripList(await tripRepository.GetTripsForDriver(driver.Id, request.Take, request.Skip));
     }
     public async Task<Trip?> GetActiveTripForUser(GIdRequest request)
     {

@@ -8,17 +8,17 @@ public class DriverLocationRepository(TutDbContext context) : Repository<DriverL
 {
     public async Task<List<DriverLocation>> GetLatestDriverLocations()
     {
-        return await _dbSet.Include(dl => dl.Location)
+        return await _dbSet
             .GroupBy(dl => dl.DriverId)
-            .Select(group => group.OrderByDescending(dl => dl.Location.Timestamp).FirstOrDefault()!)
+            .Select(group => group.OrderByDescending(dl => dl.Timestamp).FirstOrDefault()!)
             .ToListAsync();
     }
 
     public async Task<List<DriverLocation>> GetLocationHistoryForDriver(int driverId, DateTime since)
     {
-        return await _dbSet.Include(dl => dl.Location)
-            .Where(dl => dl.Location.Timestamp > since && dl.DriverId == driverId)
-            .OrderByDescending(dl => dl.Location.Timestamp)
+        return await _dbSet
+            .Where(dl => dl.Timestamp > since && dl.DriverId == driverId)
+            .OrderByDescending(dl => dl.Timestamp)
             .ToListAsync();
     }
 }

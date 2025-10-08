@@ -26,9 +26,8 @@ public class TutDbContext : DbContext
     public DbSet<Driver> Drivers { get; set; }
     public DbSet<GLocation> Locations { get; set; }
     public DbSet<Trip> Trips { get; set; }
-    public DbSet<SavedPlace> SavedPlaces { get; set; }
+    public DbSet<Place> Places { get; set; }
     public DbSet<GMessage> Messages { get; set; }
-    public DbSet<Stop> Stops { get; set; }
     public DbSet<DriverLocation> DriverLocations { get; set; }
 
 

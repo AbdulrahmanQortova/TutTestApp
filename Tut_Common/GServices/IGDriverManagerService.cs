@@ -10,5 +10,5 @@ public interface IGDriverManagerService
     public Task<Driver?> GetDriverByMobile(GStringRequest request);
     public Task DeleteDriver(GIdRequest request);
     public Task UpdateDriver(Driver driver);
-    public Task<List<Driver>> GetAllDrivers();
+    public Task<DriverList> GetAllDrivers();
 }

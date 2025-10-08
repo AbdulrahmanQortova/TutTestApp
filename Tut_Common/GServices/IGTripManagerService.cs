@@ -5,10 +5,10 @@ namespace Tut.Common.GServices;
 [Service]
 public interface IGTripManagerService
 {
-    Task<List<Trip>> GetAllTrips(GPartialListRequest request);
-    Task<List<Trip>> GetAllActiveTrips(GPartialListRequest request);
-    Task<List<Trip>> GetTripsForUser(GPartialListIdRequest request);
-    Task<List<Trip>> GetTripsForDriver(GPartialListIdRequest request);
+    Task<TripList> GetAllTrips(GPartialListRequest request);
+    Task<TripList> GetAllActiveTrips(GPartialListRequest request);
+    Task<TripList> GetTripsForUser(GPartialListIdRequest request);
+    Task<TripList> GetTripsForDriver(GPartialListIdRequest request);
     Task<Trip?> GetActiveTripForUser(GIdRequest request);
     Task<Trip?> GetActiveTripForDriver(GIdRequest request);
 }

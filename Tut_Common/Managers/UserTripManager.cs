@@ -122,7 +122,8 @@ public class UserTripManager
                                     NotificationReceived?.Invoke(this, new NotificationReceivedEventArgs { NotificationText = packet.NotificationText });
                                     break;
                                 case UserTripPacketType.DriverLocationUpdate:
-                                    DriverLocationsReceived?.Invoke(this, new DriverLocationsReceivedEventArgs { Locations = packet.DriverLocations });
+                                    if(packet.DriverLocations != null)
+                                        DriverLocationsReceived?.Invoke(this, new DriverLocationsReceivedEventArgs { Locations = packet.DriverLocations });
                                     break;
                             }
                         }

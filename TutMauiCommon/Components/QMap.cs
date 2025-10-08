@@ -172,7 +172,7 @@ public class QMap : Mapsui.Map
         _shapeFeatures.Clear();
         foreach (QMapModel.MapLine line in _model.Lines)
         {
-            _carFeatures.Add(CreateLineFeature(Project(line.StartPoint), Project(line.EndPoint), MapsColor(line.Color), line.Thickness));
+            _shapeFeatures.Add(CreateLineFeature(Project(line.StartPoint), Project(line.EndPoint), MapsColor(line.Color), line.Thickness));
         }
         RefreshData();
     }

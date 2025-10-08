@@ -27,15 +27,14 @@ public class GDriverLocationService(IDriverLocationRepository driverLocationRepo
                 await driverLocationRepository.AddAsync(new DriverLocation
                 {
                     DriverId = _driver.Id,
-                    Location = new GLocation
-                    {
-                        Latitude = location.Latitude,
-                        Longitude = location.Longitude,
-                        Altitude = location.Altitude,
-                        Course = location.Course,
-                        Speed = location.Speed,
-                        Timestamp = location.Timestamp
-                    }
+                    DriverName = _driver.FullName,
+                    DriverState = _driver.State,
+                    Latitude = location.Latitude,
+                    Longitude = location.Longitude,
+                    Altitude = location.Altitude,
+                    Course = location.Course,
+                    Speed = location.Speed,
+                    Timestamp = location.Timestamp
                 });
             }
         }
@@ -45,16 +44,16 @@ public class GDriverLocationService(IDriverLocationRepository driverLocationRepo
         }
     }
     
-    public async Task<List<DriverLocation>> GetDriverLocations()
+    public async Task<DriverLocationList> GetDriverLocations()
     {
-        return await driverLocationRepository.GetLatestDriverLocations();
+        return new DriverLocationList(await driverLocationRepository.GetLatestDriverLocations());
     }
 
-    public async Task<List<DriverLocation>> GetLocationHistoryForDriver(GIdRequest request)
+    public async Task<DriverLocationList> GetLocationHistoryForDriver(GIdRequest request)
     {
         Driver? driver = await driverRepository.GetByIdAsync(request.Id);
         if(driver is null)
             throw new RpcException(new Status(StatusCode.NotFound, $"Driver not found with id: {request.Id}"));
-        return await driverLocationRepository.GetLocationHistoryForDriver(request.Id, DateTime.Now.AddDays(-3));
+        return new DriverLocationList(await driverLocationRepository.GetLocationHistoryForDriver(request.Id, DateTime.Now.AddDays(-3)));
     }
 }

@@ -5,12 +5,16 @@ namespace Tut.Common.Models;
 public class Feedback
 {
     [ProtoMember(1)]
-    public int TripId { get; set; }
+    public int Id { get; init; }
     [ProtoMember(2)]
-    public int Rating { get; set; }
+    public required Trip Trip { get; init; }
     [ProtoMember(3)]
-    public List<string> Categories { get; set; } = [];
+    public required int Rating { get; init; }
     [ProtoMember(4)]
-    public string Comment { get; set; } = string.Empty;
+    public required List<string> Categories { get; init; }
+    [ProtoMember(5)]
+    public string Comment { get; init; } = string.Empty;
+    [ProtoMember(6, DataFormat = DataFormat.WellKnown, IsRequired = true)]
+    public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
     
 }

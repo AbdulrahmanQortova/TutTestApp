@@ -4,19 +4,20 @@ namespace Tut.Common.Models;
 [ProtoContract]
 public class GLocation
 {
-    public int Id { get; set; }
     [ProtoMember(1)]
-    public double Latitude { get; set; }
+    public int Id { get; init; }
     [ProtoMember(2)]
-    public double Longitude { get; set; }
+    public required double Latitude { get; init; }
     [ProtoMember(3)]
-    public double Altitude { get; set; }
+    public required double Longitude { get; init; }
     [ProtoMember(4)]
-    public double Course { get; set; }
+    public double Altitude { get; init; }
     [ProtoMember(5)]
-    public double Speed { get; set; }
-    [ProtoMember(6, DataFormat = DataFormat.WellKnown)]
-    public DateTime Timestamp { get; set; }
+    public double Course { get; init; }
+    [ProtoMember(6)]
+    public double Speed { get; init; }
+    [ProtoMember(7, DataFormat = DataFormat.WellKnown, IsRequired = true)]
+    public DateTime Timestamp { get; init; } = DateTime.UtcNow;
 }
 
 

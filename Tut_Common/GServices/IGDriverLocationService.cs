@@ -9,6 +9,6 @@ namespace Tut.Common.GServices;
 public interface IGDriverLocationService
 {
     public Task RegisterLocation(IAsyncEnumerable<GLocation> locations, CallContext context = default);
-    public Task<List<DriverLocation>> GetDriverLocations();
-    public Task<List<DriverLocation>> GetLocationHistoryForDriver(GIdRequest request);
+    public Task<DriverLocationList> GetDriverLocations();
+    public Task<DriverLocationList> GetLocationHistoryForDriver(GIdRequest request);
 }

@@ -5,14 +5,15 @@ namespace Tut.Common.Models;
 [ProtoContract]
 public class GMessage
 {
-    public int Id { get; set; }
     [ProtoMember(1)]
-    public int SenderId { get; set; }
+    public int Id { get; init; }
     [ProtoMember(2)]
-    public int RecipientId { get; set; }
+    public required int SenderId { get; init; }
     [ProtoMember(3)]
-    public string Content { get; set; } = string.Empty;
-    [ProtoMember(4, DataFormat = DataFormat.WellKnown)]
+    public required int RecipientId { get; init; }
+    [ProtoMember(4)]
+    public required string Content { get; set; }
+    [ProtoMember(5, DataFormat = DataFormat.WellKnown, IsRequired = true)]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 

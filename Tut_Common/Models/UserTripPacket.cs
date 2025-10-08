@@ -5,17 +5,17 @@ namespace Tut.Common.Models;
 public class UserTripPacket
 {
     [ProtoMember(1)]
-    public UserTripPacketType Type { get; set; } = UserTripPacketType.Unspecified;
+    public required UserTripPacketType Type { get; init; }
     [ProtoMember(2)]
-    public string ErrorText { get; set; } = string.Empty;
+    public string ErrorText { get; init; } = string.Empty;
     [ProtoMember(3)]
-    public Trip? Trip { get; set; }
+    public Trip? Trip { get; init; }
     [ProtoMember(4)]
-    public string NotificationText { get; set; } = string.Empty;
+    public string NotificationText { get; init; } = string.Empty;
     [ProtoMember(5)]
-    public List<GLocation> DriverLocations { get; set; } = [];
-    [ProtoMember(6)]
-    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+    public List<GLocation>? DriverLocations { get; init; }
+    [ProtoMember(6, DataFormat = DataFormat.WellKnown, IsRequired = true)]
+    public DateTime Timestamp { get; init; } = DateTime.UtcNow;
 
 
     public static UserTripPacket Error(string errorText)
@@ -27,6 +27,14 @@ public class UserTripPacket
         };
     }
 
+    public static UserTripPacket Success()
+    {
+        return new UserTripPacket
+        {
+            Type = UserTripPacketType.Success
+        };
+    }
+    
     public static UserTripPacket StatusUpdate(Trip? trip)
     {
         return new UserTripPacket
@@ -42,6 +50,7 @@ public enum UserTripPacketType
 {
     Unspecified = 0,
     Error,
+    Success,
     
     StatusUpdate = 101,              // Server
     DriverLocationUpdate,

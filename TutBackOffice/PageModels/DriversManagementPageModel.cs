@@ -53,7 +53,7 @@ public partial class DriversManagementPageModel : ObservableObject
         {
             try
             {
-                List<Driver> drivers = await _driverManagerService.GetAllDrivers();
+                List<Driver> drivers = (await _driverManagerService.GetAllDrivers()).Drivers ?? [];
                 Drivers = new ObservableCollection<Driver>(drivers);
             }
             catch (Exception ex)
@@ -136,7 +136,7 @@ public partial class DriversManagementPageModel : ObservableObject
             // Refresh full list to keep UI in sync
             try
             {
-                var drivers = await _driverManagerService.GetAllDrivers();
+                List<Driver> drivers = (await _driverManagerService.GetAllDrivers()).Drivers ?? [];
                 Drivers = new ObservableCollection<Driver>(drivers);
             }
             catch (Exception ex)

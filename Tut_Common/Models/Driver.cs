@@ -18,20 +18,31 @@ public class Driver
     public string NationalId { get; set; } = string.Empty;
     [ProtoMember(7)]
     public DriverState State { get; set; } = DriverState.Unspecified;
-    [ProtoMember(8, AsReference = true)]
-    public GLocation Location { get; set; } = new();
-    [ProtoMember(9)]
+    [ProtoMember(8)]
     public string Password { get; set; } = string.Empty;
-    [ProtoMember(10)]
+    [ProtoMember(9)]
     public int TotalTrips { get; set; }
-    [ProtoMember(11)]
+    [ProtoMember(10)]
     public double Rating { get; set; }
-    [ProtoMember(12)]
+    [ProtoMember(11)]
     public double TotalEarnings { get; set; }
-    [ProtoMember(13, AsReference = true)]
-    public List<Trip>? Trips { get; set; } = [];
+    [ProtoMember(12, AsReference = true)]
+    public List<Trip>? Trips { get; set; }
     public string FullName {get => FirstName + " " + LastName; }
 
+}
+
+[ProtoContract]
+public class DriverList
+{
+    [ProtoMember(1)]
+    public List<Driver>? Drivers { get; init; }
+
+    public DriverList() { }
+    public DriverList(IEnumerable<Driver> drivers)
+    {
+        Drivers = drivers.ToList();
+    }
 }
 
 

@@ -87,16 +87,17 @@ public partial class LiveTrackingPageModel : ObservableObject
 
     private async Task Iteration()
     {
-        List<Trip> activeTrips = await _tripManagerService.GetAllActiveTrips(new GPartialListRequest());
-        List<DriverLocation> driverLocations = await _driverLocationService.GetDriverLocations();
+        List<Trip> activeTrips = (await _tripManagerService.GetAllActiveTrips(new GPartialListRequest())).Trips ?? [];
+        List<DriverLocation> driverLocations = (await _driverLocationService.GetDriverLocations()).Locations ?? [];
         // Fetch all drivers to determine their current state so we can filter out offline/unspecified
-        List<Driver> allDrivers = await _driverManagerService.GetAllDrivers();
+        List<Driver> allDrivers = (await _driverManagerService.GetAllDrivers()).Drivers ?? [];
         var driverStateById = allDrivers.ToDictionary(d => d.Id, d => d.State);
 
         List<QMapModel.MapRoute> routes = [];
         List<QMapModel.MapPoint> endPoints = [];
         List<QMapModel.MapPoint> stops = [];
         List<QMapModel.MapCar> cars = [];
+        List<QMapModel.MapLine> lines = [];
         
         foreach (Trip trip in activeTrips)
         {
@@ -104,12 +105,12 @@ public partial class LiveTrackingPageModel : ObservableObject
                 continue;
             endPoints.Add(new QMapModel.MapPoint()
             {
-                Location = new Location(trip.Stops[0].Place!.Location.Latitude, trip.Stops[0].Place!.Location.Longitude),
+                Location = new Location(trip.Stops[0].Latitude, trip.Stops[0].Longitude),
                 Color = Colors.Green
             });
             endPoints.Add(new QMapModel.MapPoint()
             {
-                Location = new Location(trip.Stops[^1].Place!.Location.Latitude, trip.Stops[^1].Place!.Location.Longitude),
+                Location = new Location(trip.Stops[^1].Latitude, trip.Stops[^1].Longitude),
                 Color = Colors.GreenYellow
             });
             for (int i = 1; i < trip.Stops.Count -1; i++)
@@ -118,14 +119,21 @@ public partial class LiveTrackingPageModel : ObservableObject
                     break;
                 stops.Add(new QMapModel.MapPoint()
                 {
-                    Location = new Location(trip.Stops[i].Place!.Location.Latitude, trip.Stops[i].Place!.Location.Longitude),
+                    Location = new Location(trip.Stops[i].Latitude, trip.Stops[i].Longitude),
                     Color = Colors.Yellow
                 });
             }
-            routes.Add(new QMapModel.MapRoute
+            if (!string.IsNullOrEmpty(trip.Route))
             {
-                Route = new Route(trip.Route)
-            });
+                routes.Add(new QMapModel.MapRoute
+                {
+                    Route = new Route(trip.Route)
+                });
+            }
+            else
+            {
+                lines.AddRange(GetSimpleRouteForTrip(trip));
+            }
         }
 
         // Only add cars for drivers that exist and whose state is neither Offline nor Unspecified
@@ -133,7 +141,7 @@ public partial class LiveTrackingPageModel : ObservableObject
             .Where(dl => driverStateById.TryGetValue(dl.DriverId, out var state) && state != DriverState.Offline && state != DriverState.Unspecified)
             .Select(driverLocation => new QMapModel.MapCar
             {
-                Location = new Location(driverLocation.Location.Latitude, driverLocation.Location.Longitude),
+                Location = new Location(driverLocation.Latitude, driverLocation.Longitude),
             }));
 
 
@@ -142,11 +150,31 @@ public partial class LiveTrackingPageModel : ObservableObject
             Routes = new ObservableCollection<QMapModel.MapRoute>(routes),
             EndPoints = new ObservableCollection<QMapModel.MapPoint>(endPoints),
             Stops = new ObservableCollection<QMapModel.MapPoint>(stops),
-            Cars = new ObservableCollection<QMapModel.MapCar>(cars)
+            Cars = new ObservableCollection<QMapModel.MapCar>(cars),
+            Lines = new ObservableCollection<QMapModel.MapLine>(lines)
         };
         mapModel.CalculateExtent();
         
         MapModel = mapModel;
     }
 
+
+    private static List<QMapModel.MapLine> GetSimpleRouteForTrip(Trip trip, Color? color = null, int thickness = 1)
+    {
+        List<QMapModel.MapLine> result = [];
+        for (int i = 1; i < trip.Stops.Count; i++)
+        {
+            QMapModel.MapLine line = new QMapModel.MapLine
+            {
+                StartPoint = new Location(trip.Stops[i-1].Latitude, trip.Stops[i-1].Longitude),
+                EndPoint = new Location(trip.Stops[i].Latitude, trip.Stops[i].Longitude),
+                Thickness = thickness
+            };
+            if(color != null)
+                line.Color = color;
+            
+            result.Add(line);
+        } 
+        return result;
+    }
 }

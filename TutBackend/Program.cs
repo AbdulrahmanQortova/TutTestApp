@@ -26,14 +26,13 @@ public static class Program
         builder.Services.AddScoped<IDriverRepository, DriverRepository>();
         builder.Services.AddScoped<ILocationRepository, LocationRepository>();
         builder.Services.AddScoped<ITripRepository, TripRepository>();
-        builder.Services.AddScoped<ISavedPlaceRepository, SavedPlaceRepository>();
+        builder.Services.AddScoped<IPlaceRepository, PlaceRepository>();
         builder.Services.AddScoped<IMessageRepository, MessageRepository>();
-        builder.Services.AddScoped<IStopRepository, StopRepository>();
         builder.Services.AddScoped<IDriverLocationRepository, DriverLocationRepository>();
         builder.Services.AddScoped<QipClient>();
 
         // Register DriverSelector for injecting into TripDistributor
-        builder.Services.AddSingleton<DriverSelector>();
+        builder.Services.AddTransient<DriverSelector>();
 
         // Register TripDistributor as a hosted background service
         builder.Services.AddHostedService<TripDistributor>();

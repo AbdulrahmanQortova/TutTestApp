@@ -5,19 +5,26 @@ namespace Tut.Common.Models;
 public class DriverTripPacket
 {
     [ProtoMember(1)]
-    public DriverTripPacketType Type { get; set; } = DriverTripPacketType.Unspecified;
+    public required DriverTripPacketType Type { get; init; }
     [ProtoMember(2)]
-    public string ErrorText { get; set; } = string.Empty;
+    public string ErrorText { get; init; } = string.Empty;
     [ProtoMember(3)]
-    public Trip? Trip { get; set; }
+    public Trip? Trip { get; init; }
     [ProtoMember(4)]
-    public int DistanceTravelledSoFar { get; set; }
+    public int DistanceTravelledSoFar { get; init; }
     [ProtoMember(5)]
-    public int PaymentAmount { get; set; }
-    [ProtoMember(6)]
-    public DateTime? Timestamp { get; set; } = DateTime.UtcNow;
+    public int PaymentAmount { get; init; }
+    [ProtoMember(6, DataFormat = DataFormat.WellKnown, IsRequired = true)]
+    public DateTime? Timestamp { get; init; } = DateTime.UtcNow;
 
-
+    public static DriverTripPacket Success()
+    {
+        return new DriverTripPacket
+        {
+            Type = DriverTripPacketType.Success
+        };
+    }
+    
     public static DriverTripPacket Error(string errorText)
     {
         return new DriverTripPacket
@@ -42,6 +49,7 @@ public enum DriverTripPacketType
 {
     Unspecified = 0,
     Error,
+    Success,
     
     OfferTrip = 101,                  // Server
     StatusUpdate,                     // Server

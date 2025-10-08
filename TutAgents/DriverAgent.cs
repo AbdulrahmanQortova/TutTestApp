@@ -9,7 +9,7 @@ namespace Tut.Agents;
 public class DriverAgent
 {
     private readonly Options _options;
-    private readonly GLocation _currentLocation;
+    private GLocation _currentLocation;
     private CancellationTokenSource _runCts = new();
 
     private readonly DriverLocationManagerService _locationManager;
@@ -41,16 +41,7 @@ public class DriverAgent
         {
             { TripState.Accepted, async (t, ct) => await HandleAcceptedAsync(t, ct) },
             { TripState.DriverArrived, async (t, ct) => await HandleDriverArrivedAsync(t, ct) },
-            { TripState.AtStop1, async (_, ct) => await HandleAtStopsAsync(ct) },
-            { TripState.AtStop2, async (_, ct) => await HandleAtStopsAsync(ct) },
-            { TripState.AtStop3, async (_, ct) => await HandleAtStopsAsync(ct) },
-            { TripState.AtStop4, async (_, ct) => await HandleAtStopsAsync(ct) },
-            { TripState.AtStop5, async (_, ct) => await HandleAtStopsAsync(ct) },
-            { TripState.AfterStop1, async (t, ct) => await HandleMoveAndMaybeStopAsync(t, 2, 3, ct) },
-            { TripState.AfterStop2, async (t, ct) => await HandleMoveAndMaybeStopAsync(t, 3, 4, ct) },
-            { TripState.AfterStop3, async (t, ct) => await HandleMoveAndMaybeStopAsync(t, 4, 5, ct) },
-            { TripState.AfterStop4, async (t, ct) => await HandleMoveAndMaybeStopAsync(t, 5, 6, ct) },
-            { TripState.AfterStop5, async (t, ct) => { await SafeMoveToIndexAsync(t, 6, ct); if (!ct.IsCancellationRequested) await _tripManager.SendArrivedAtDestinationAsync(ct); } },
+            { TripState.AtStop, async (_, ct) => await HandleAtStopsAsync(ct) },
             { TripState.Arrived, async (t, ct) => await HandleArrivedAsync(t, ct) }
         };
 
@@ -186,8 +177,7 @@ public class DriverAgent
     {
         if (index < 0 || trip.Stops.Count <= index)
             return Task.CompletedTask;
-        var loc = trip.Stops[index].Place?.Location;
-        if (loc is null) return Task.CompletedTask;
+        GLocation loc = trip.Stops[index].ToLocation();
         return MoveTo(loc, ct);
     }
 
@@ -196,13 +186,6 @@ public class DriverAgent
         return (trip.Stops.Count > minStopsForStop)
             ? _tripManager.SendArrivedAtStopAsync(ct)
             : _tripManager.SendArrivedAtDestinationAsync(ct);
-    }
-
-    private async Task HandleMoveAndMaybeStopAsync(Trip trip, int moveIndex, int minStopsForStop, CancellationToken ct)
-    {
-        await SafeMoveToIndexAsync(trip, moveIndex, ct);
-        if (!ct.IsCancellationRequested)
-            await SendArriveOrStopAsync(trip, minStopsForStop, ct);
     }
 
     private async Task HandleAcceptedAsync(Trip trip, CancellationToken ct)
@@ -325,12 +308,13 @@ public class DriverAgent
         double course = angleRad * (180.0 / Math.PI);
         if (course < 0) course += 360.0;
 
-        // Update the current location in-place
-        _currentLocation.Latitude = next.Latitude;
-        _currentLocation.Longitude = next.Longitude;
-        _currentLocation.Course = course;
-        _currentLocation.Speed = speed;
-        _currentLocation.Timestamp = DateTime.UtcNow;
+        _currentLocation = new GLocation
+        {
+            Latitude = next.Latitude,
+            Longitude = next.Longitude,
+            Course = course,
+            Speed = speed
+        };
 
         await NotifyLocationChanged();
 

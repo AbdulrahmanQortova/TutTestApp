@@ -137,24 +137,37 @@ public class UserAgent
     {
         var rng = Random.Shared;
         // Create pickup
-        var pickup = new Stop
+        GLocation loc = RandomLocationInBounds(_options.AreaBottomLeft, _options.AreaTopRight);
+        var pickup = new Place
         {
-            Place = new Place { Name = "Pickup", Location = RandomLocationInBounds(_options.AreaBottomLeft, _options.AreaTopRight) }
+            PlaceType = PlaceType.Stop,
+            Name = "Pickup",
+            Latitude = loc.Latitude,
+            Longitude = loc.Longitude
         };
 
         int extraStops = rng.Next(0, 3); // 0,1,2 intermediate stops
-        var stops = new List<Stop> { pickup };
+        var stops = new List<Place> { pickup };
         for (int i = 0; i < extraStops; i++)
         {
-            stops.Add(new Stop
+            loc = RandomLocationInBounds(_options.AreaBottomLeft, _options.AreaTopRight);
+            stops.Add(new Place
             {
-                Place = new Place { Name = $"Stop{i + 1}", Location = RandomLocationInBounds(_options.AreaBottomLeft, _options.AreaTopRight) }
+                PlaceType = PlaceType.Stop,
+                Name = $"Stop{i + 1}",
+                Latitude = loc.Latitude,
+                Longitude = loc.Longitude,
+                Order = i
             });
         }
 
-        var dropoff = new Stop
+        loc = RandomLocationInBounds(_options.AreaBottomLeft, _options.AreaTopRight);
+        var dropoff = new Place
         {
-            Place = new Place { Name = "Dropoff", Location = RandomLocationInBounds(_options.AreaBottomLeft, _options.AreaTopRight) }
+            PlaceType = PlaceType.Stop,
+            Name = "Dropoff",
+            Latitude = loc.Latitude,
+            Longitude = loc.Longitude,
         };
 
         stops.Add(dropoff);

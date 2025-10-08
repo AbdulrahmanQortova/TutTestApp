@@ -3,18 +3,13 @@ using TutBackend.Repositories;
 
 namespace TutBackend.Services;
 
-public class TripDistributor : BackgroundService
+public class TripDistributor(
+    IServiceProvider services, 
+    DriverSelector driverSelector,
+    ILogger<TripDistributor> logger 
+    ) 
+    : BackgroundService
 {
-    private readonly IServiceProvider _services;
-    private readonly ILogger<TripDistributor> _logger;
-    private readonly DriverSelector _driverSelector;
-
-    public TripDistributor(IServiceProvider services, ILogger<TripDistributor> logger, DriverSelector driverSelector)
-    {
-        _services = services ?? throw new ArgumentNullException(nameof(services));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _driverSelector = driverSelector ?? throw new ArgumentNullException(nameof(driverSelector));
-    }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -27,9 +22,8 @@ public class TripDistributor : BackgroundService
         {
             try
             {
-                using var scope = _services.CreateScope();
+                using var scope = services.CreateScope();
                 var tripRepository = scope.ServiceProvider.GetRequiredService<ITripRepository>();
-                var driverLocationRepository = scope.ServiceProvider.GetRequiredService<IDriverLocationRepository>();
                 var driverRepository = scope.ServiceProvider.GetRequiredService<IDriverRepository>();
 
                 // Fetch a single unassigned trip directly from the repository.
@@ -42,13 +36,13 @@ public class TripDistributor : BackgroundService
                     continue;
                 }
 
-                _logger.LogInformation("Found unassigned trip {TripId}, finding best driver...", trip.Id);
+                logger.LogInformation("Found unassigned trip {TripId}, finding best driver...", trip.Id);
 
                 // Use the injected DriverSelector to pick the best driver
-                var bestDriver = await _driverSelector.FindBestDriverAsync(trip, [], driverLocationRepository, driverRepository);
+                var bestDriver = await driverSelector.FindBestDriverAsync(trip, new HashSet<int>());
                 if (bestDriver is null)
                 {
-                    _logger.LogInformation("No suitable driver found for trip {TripId}", trip.Id);
+                    logger.LogInformation("No suitable driver found for trip {TripId}", trip.Id);
                     // Wait a bit before retrying so we don't tight-loop on the same trip
                     await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
                     continue;
@@ -59,10 +53,7 @@ public class TripDistributor : BackgroundService
                 bestDriver.State = DriverState.Requested;
                 await driverRepository.UpdateAsync(bestDriver);
                 await tripRepository.UpdateAsync(trip);
-                _logger.LogInformation("Assigned driver {DriverId} to trip {TripId}", bestDriver.Id, trip.Id);
-
-                // Small delay before processing next trip to avoid DB hot loop
-                await Task.Delay(TimeSpan.FromMilliseconds(200), cancellationToken);
+                logger.LogInformation("Assigned driver {DriverId} to trip {TripId}", bestDriver.Id, trip.Id);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -71,7 +62,7 @@ public class TripDistributor : BackgroundService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in DistributionLoop");
+                logger.LogError(ex, "Error in DistributionLoop");
                 // Backoff on error
                 try
                 {

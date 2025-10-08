@@ -96,9 +96,9 @@ public partial class QMapModel : ObservableObject
 
     public class MapLine
     {
-        public Location StartPoint { get; set; } = new();
-        public Location EndPoint { get; set; } = new();
-        public Color Color { get; set; } = Colors.Yellow;
+        public required Location StartPoint { get; set; }
+        public required Location EndPoint { get; set; }
+        public Color Color { get; set; } = Colors.Black;
         public int Thickness { get; set; } = 1;
     }
 }
