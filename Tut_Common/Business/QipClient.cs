@@ -1,4 +1,5 @@
-namespace TutBackend.Services;
+using System.Net.Http.Json;
+namespace Tut.Common.Business;
     /// <summary>
     /// Simple HTTP client wrapper for Qip API auth endpoints.
     /// </summary>

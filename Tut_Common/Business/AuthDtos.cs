@@ -1,6 +1,5 @@
 using System.Text.Json.Serialization;
-
-namespace TutBackend.Services;
+namespace Tut.Common.Business;
     // Request DTOs
     public sealed class RegisterRequest
     {

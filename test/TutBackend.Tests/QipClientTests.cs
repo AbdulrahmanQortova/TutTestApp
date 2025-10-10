@@ -2,6 +2,8 @@ using Xunit;
 using TutBackend.Services;
 using System.Net;
 using System.Net.Http.Json;
+using Tut.Common.Business;
+using Tut.Common.GServices;
 
 namespace TutBackend.Tests;
 
