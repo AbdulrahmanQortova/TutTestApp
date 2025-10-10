@@ -9,9 +9,9 @@ public class User
     [ProtoMember(2)]
     public string Mobile { get; init; } = string.Empty;
     [ProtoMember(3)]
-    public string FirstName { get; init; } = string.Empty;
+    public string FirstName { get; set; } = string.Empty;
     [ProtoMember(4)]
-    public string LastName { get; init; } = string.Empty;
+    public string LastName { get; set; } = string.Empty;
     [ProtoMember(5)]
     public string Email { get; init; } = string.Empty;
 
