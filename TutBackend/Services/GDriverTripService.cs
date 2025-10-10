@@ -68,15 +68,6 @@ public class GDriverTripService(
                 if (outPacket.Type != DriverTripPacketType.Unspecified && outPacket.Type != DriverTripPacketType.Success)
                     yield return outPacket;
             }
-            
-/*            
-            var reader = _responseChannel.Reader;
-            while (await reader.WaitToReadAsync(_cancellation.Token))
-                while (reader.TryRead(out var outPacket))
-                    if (outPacket.Type != DriverTripPacketType.Unspecified && outPacket.Type != DriverTripPacketType.Success)
-                        yield return outPacket;
-*/
-            
         }
         finally
         {
@@ -85,10 +76,10 @@ public class GDriverTripService(
 
             // Update driver state offline using a fresh scope to avoid cross-thread DbContext access
             using var scope = scopeFactory.CreateScope();
-            var scopedDriverRepo = (IDriverRepository)scope.ServiceProvider.GetService(typeof(IDriverRepository))!;
+            IDriverRepository scopedDriverRepo = scope.ServiceProvider.GetRequiredService<IDriverRepository>();
             if (_driverId != -1)
             {
-                var scopedDriver = await scopedDriverRepo.GetByIdAsync(_driverId);
+                Driver? scopedDriver = await scopedDriverRepo.GetByIdAsync(_driverId);
                 if (scopedDriver is not null)
                 {
                     scopedDriver.State = DriverState.Offline;
@@ -332,7 +323,6 @@ public class GDriverTripService(
         logger.LogDebug("Driver {Driver} Continued after Stop Trip: {Trip}", scopedDriver!.FullName, scopedTrip!.Id);
 
         scopedTrip.Status = TripState.Ongoing;
-        scopedTrip.StartTime = DateTime.UtcNow;
         await scopedTripRepo.UpdateAsync(scopedTrip);
         return DriverTripPacket.StatusUpdate(scopedTrip);
     }

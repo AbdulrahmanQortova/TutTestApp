@@ -57,6 +57,6 @@ public class GDriverManagerService(IDriverRepository driverRepository, QipClient
     
     public async Task<DriverList> GetAllDrivers()
     {
-        return new DriverList(await driverRepository.GetAllAsync());
+        return new DriverList(await driverRepository.GetAllDriversAsync());
     }
 }

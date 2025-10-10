@@ -31,4 +31,20 @@ public class DriverRepository(TutDbContext context) : Repository<Driver>(context
             return [];
         return await _dbSet.Where(d => idList.Contains(d.Id)).ToListAsync();
     }
+
+    public async Task<List<Driver>> GetAllDriversAsync()
+    {
+        var lst = _dbSet.Select(d => new
+        {
+            Driver = d,
+            TotalTrips = d.Trips!.Count,
+            TotalEarnings = d.Trips.Sum(t => t.ActualCost)
+        });
+        await lst.ForEachAsync(dt =>
+        {
+            dt.Driver.TotalTrips = dt.TotalTrips;
+            dt.Driver.TotalEarnings = dt.TotalEarnings;
+        });
+        return await lst.Select(dt => dt.Driver).ToListAsync();
+    }
 }
