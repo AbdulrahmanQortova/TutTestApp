@@ -17,6 +17,14 @@ public class DriverLocationRepository(TutDbContext context) : Repository<DriverL
             .ToListAsync();
     }
 
+    public async Task<DriverLocation?> GetLatestDriverLocation(int id)
+    {
+        return await _dbSet
+            .OrderByDescending(dl => dl.Timestamp)
+            .ThenByDescending(dl => dl.Id)
+            .FirstOrDefaultAsync();
+    }
+    
     public async Task<List<DriverLocation>> GetLocationHistoryForDriver(int driverId, DateTime since)
     {
         return await _dbSet

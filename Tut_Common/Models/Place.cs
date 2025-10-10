@@ -39,4 +39,5 @@ public enum PlaceType
     Saved = 1,
     Recent = 2,
     Stop = 3,
+    Location = 4
 }

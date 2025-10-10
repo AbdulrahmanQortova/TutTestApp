@@ -85,7 +85,7 @@ public static class Program
         {
             await driverRepository.AddAsync(new Driver
             {
-                Mobile = $"D0{i+1}",
+                Mobile = $"DA{i+1}",
                 FirstName = "Driver",
                 LastName = $"Agent # {i+1}",
                 Password = "Pass@123",
@@ -97,7 +97,7 @@ public static class Program
         {
             await userRepository.AddAsync(new User
             {
-                Mobile = $"U0{i+1}",
+                Mobile = $"UA{i+1}",
                 FirstName = "User",
                 LastName = $"Agent # {i+1}",
                 Email = "d@g.com",

@@ -1,6 +1,7 @@
 using Grpc.Core;
 using ProtoBuf.Grpc;
 using System.Threading.Channels;
+using Tut.Common.Business;
 using Tut.Common.GServices;
 using Tut.Common.Models;
 using Tut.Common.Utils;
@@ -10,7 +11,9 @@ namespace TutBackend.Services;
 public class GDriverTripService(
     IDriverRepository driverRepository,
     ITripRepository tripRepository,
+    IDriverLocationRepository driverLocationRepository,
     QipClient qipClient,
+    IPricingStrategy pricingStrategy,
     IServiceScopeFactory scopeFactory,
     ILogger<GDriverManagerService> logger
     )
@@ -278,6 +281,17 @@ public class GDriverTripService(
         scopedDriver.State = DriverState.EnRoute;
         await scopedDriverRepo.UpdateAsync(scopedDriver);
         scopedTrip.Status = TripState.Accepted;
+        DriverLocation? driverLocation = await driverLocationRepository.GetLatestDriverLocation(scopedDriver.Id);
+        if (driverLocation is not null)
+        {
+            scopedTrip.RequestedDriverPlace = new Place
+            {
+                PlaceType = PlaceType.Location,
+                Name = "Requested Driver Place",
+                Latitude = driverLocation.Latitude,
+                Longitude = driverLocation.Longitude,
+            };
+        }
         await scopedTripRepo.UpdateAsync(scopedTrip);
         return DriverTripPacket.StatusUpdate(scopedTrip);
     }
@@ -293,7 +307,7 @@ public class GDriverTripService(
         
         scopedTrip.Status = TripState.DriverArrived;
         scopedTrip.DriverArrivalTime = DateTime.UtcNow;
-        scopedTrip.ActualArrivalDuration = (scopedTrip.DriverArrivalTime - scopedTrip.CreatedAt).Seconds;
+        scopedTrip.ActualArrivalDuration = (int)((scopedTrip.DriverArrivalTime - scopedTrip.CreatedAt).TotalSeconds);
         scopedTrip.NextStop++;
         await scopedTripRepo.UpdateAsync(scopedTrip);
         return DriverTripPacket.StatusUpdate(scopedTrip);
@@ -356,9 +370,9 @@ public class GDriverTripService(
 
         scopedTrip.Status = TripState.Arrived;
         scopedTrip.EndTime = DateTime.UtcNow;
-        scopedTrip.ActualTripDuration = (scopedTrip.EndTime - scopedTrip.StartTime).Seconds;
+        scopedTrip.ActualTripDuration = (int)((scopedTrip.EndTime - scopedTrip.StartTime).TotalSeconds);
         scopedTrip.ActualDistance = scopedTrip.EstimatedDistance;
-        scopedTrip.ActualCost = scopedTrip.EstimatedCost;
+        scopedTrip.ActualCost = pricingStrategy.FinalPrice(scopedTrip);
         await scopedTripRepo.UpdateAsync(scopedTrip);
         return DriverTripPacket.StatusUpdate(scopedTrip);
     }

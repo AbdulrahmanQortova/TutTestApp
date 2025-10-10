@@ -205,7 +205,7 @@ public class GUserTripService(
     {
         if (trip is null) return UserTripPacket.Error("Trip Inquired without specifying the trip");
 
-        trip.EstimatedCost = pricingStrategy.Price(trip);
+        trip.EstimatedCost = pricingStrategy.EstimatedPrice(trip);
         trip.EstimatedArrivalDuration = await driverSelector.EstimateDriverArrivalTime(trip);
         return new UserTripPacket
         {

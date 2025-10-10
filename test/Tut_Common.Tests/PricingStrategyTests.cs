@@ -17,7 +17,7 @@ public class PricingStrategyTests
             EstimatedTripDuration = 0
         };
 
-        double price = strategy.Price(trip);
+        double price = strategy.EstimatedPrice(trip);
 
         // Base cost is 15
         Assert.Equal(15, price);
@@ -34,7 +34,7 @@ public class PricingStrategyTests
             EstimatedTripDuration = 0
         };
 
-        double price = strategy.Price(trip);
+        double price = strategy.EstimatedPrice(trip);
 
         // Base (15) + Distance (5 km * 10 = 50) = 65
         Assert.Equal(65, price);
@@ -51,7 +51,7 @@ public class PricingStrategyTests
             EstimatedTripDuration = 1800 // 30 minutes
         };
 
-        double price = strategy.Price(trip);
+        double price = strategy.EstimatedPrice(trip);
 
         // Base (15) + Time (30 min * 1 = 30) = 45
         Assert.Equal(45, price);
@@ -68,7 +68,7 @@ public class PricingStrategyTests
             EstimatedTripDuration = 1200 // 20 minutes
         };
 
-        double price = strategy.Price(trip);
+        double price = strategy.EstimatedPrice(trip);
 
         // Base (15) + Distance (10 km * 10 = 100) + Time (20 min * 1 = 20) = 135
         Assert.Equal(135, price);
@@ -85,7 +85,7 @@ public class PricingStrategyTests
             EstimatedTripDuration = 300 // 5 minutes
         };
 
-        double price = strategy.Price(trip);
+        double price = strategy.EstimatedPrice(trip);
 
         // Base (15) + Distance (1 km * 10 = 10) + Time (5 min * 1 = 5) = 30
         Assert.Equal(30, price);
@@ -102,7 +102,7 @@ public class PricingStrategyTests
             EstimatedTripDuration = 3600 // 60 minutes
         };
 
-        double price = strategy.Price(trip);
+        double price = strategy.EstimatedPrice(trip);
 
         // Base (15) + Distance (50 km * 10 = 500) + Time (60 min * 1 = 60) = 575
         Assert.Equal(575, price);
@@ -119,7 +119,7 @@ public class PricingStrategyTests
             EstimatedTripDuration = 60 // 1 minute
         };
 
-        double price = strategy.Price(trip);
+        double price = strategy.EstimatedPrice(trip);
 
         // Base (15) + Distance (0.1 km * 10 = 1) + Time (1 min * 1 = 1) = 17
         Assert.Equal(17, price);
@@ -136,7 +136,7 @@ public class PricingStrategyTests
             EstimatedTripDuration = 0
         };
 
-        double price = strategy.Price(trip);
+        double price = strategy.EstimatedPrice(trip);
 
         // Base (15) + Distance (8 km * 10 = 80) = 95
         Assert.Equal(95, price);
@@ -153,7 +153,7 @@ public class PricingStrategyTests
             EstimatedTripDuration = 2400 // 40 minutes
         };
 
-        double price = strategy.Price(trip);
+        double price = strategy.EstimatedPrice(trip);
 
         // Base (15) + Time (40 min * 1 = 40) = 55
         Assert.Equal(55, price);
@@ -170,7 +170,7 @@ public class PricingStrategyTests
             EstimatedTripDuration = 450 // 7.5 minutes
         };
 
-        double price = strategy.Price(trip);
+        double price = strategy.EstimatedPrice(trip);
 
         // Base (15) + Distance (2.5 km * 10 = 25) + Time (7.5 min * 1 = 7.5) = 47.5
         Assert.Equal(47.5, price);
@@ -187,7 +187,7 @@ public class PricingStrategyTests
             EstimatedTripDuration = 600
         };
 
-        double price = strategy.Price(trip);
+        double price = strategy.EstimatedPrice(trip);
 
         // Base (15) + Distance (5 km * 10 = 50) + Time (10 min * 1 = 10) = 75
         Assert.Equal(75, price);
