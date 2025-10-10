@@ -10,7 +10,7 @@ public class Trip
     public int Id { get; init; }
 
     [ProtoMember(2, AsReference = true)]
-    public required User User { get; init; }
+    public User? User { get; set; }
     
     [ProtoMember(3, AsReference = true)]
     public Driver? Driver { get; set; }

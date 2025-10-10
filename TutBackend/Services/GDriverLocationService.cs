@@ -3,12 +3,14 @@ using ProtoBuf.Grpc;
 using Tut.Common.GServices;
 using Tut.Common.Models;
 using Tut.Common.Utils;
+using TutBackend.Data;
 using TutBackend.Repositories;
 namespace TutBackend.Services;
 
 public class GDriverLocationService(IDriverLocationRepository driverLocationRepository
     , IDriverRepository driverRepository
     , QipClient qipClient
+    , TutDbContext dbContext
     , ILogger<GDriverManagerService> logger)
     : IGDriverLocationService
 {
@@ -24,6 +26,10 @@ public class GDriverLocationService(IDriverLocationRepository driverLocationRepo
         {
             await foreach (GLocation location in locations)
             {
+                await dbContext.Entry(_driver).ReloadAsync();
+                _driver = await driverRepository.GetByIdAsync(_driver.Id);
+                if (_driver is null)
+                    throw new RpcException(new Status(StatusCode.NotFound, "Driver not found in Database"));
                 await driverLocationRepository.AddAsync(new DriverLocation
                 {
                     DriverId = _driver.Id,

@@ -146,13 +146,15 @@ public class GUserTripService(
         return TripState.Unspecified;
     }
 
-    private async Task<UserTripPacket> HandleRequestTripAsync(ITripRepository scopedTripRepo, Trip? trip)
+    private async Task<UserTripPacket> HandleRequestTripAsync(ITripRepository scopedTripRepo, IUserRepository scopedUserRepo, Trip? trip)
     {
         if (trip is null) return UserTripPacket.Error("Trip Requested without specifying the trip");
         // Use fresh user entity from scoped repo and avoid storing trip entity globally
         Trip? prevTrip = await scopedTripRepo.GetActiveTripForUser(_userId);
         if (prevTrip is not null)
             return UserTripPacket.Error("User already has an active trip");
+        User? user = await scopedUserRepo.GetByIdAsync(_userId);
+        trip.User = user;
         await scopedTripRepo.AddAsync(trip);
         return UserTripPacket.Success();
     }
@@ -177,6 +179,7 @@ public class GUserTripService(
         {
             using var scope = scopeFactory.CreateScope();
             var scopedTripRepo = scope.ServiceProvider.GetRequiredService<ITripRepository>();
+            var scopedUserRepo = scope.ServiceProvider.GetRequiredService<IUserRepository>();
 
             switch (packet.Type)
             {
@@ -186,7 +189,7 @@ public class GUserTripService(
                     Trip? trip = await scopedTripRepo.GetActiveTripForUser(_userId);
                     return UserTripPacket.StatusUpdate(trip);
                 case UserTripPacketType.RequestTrip:
-                    return await HandleRequestTripAsync(scopedTripRepo, packet.Trip);
+                    return await HandleRequestTripAsync(scopedTripRepo, scopedUserRepo, packet.Trip);
                 case UserTripPacketType.CancelTrip:
                     return await HandleCancelTripAsync(scopedTripRepo);
                 default:

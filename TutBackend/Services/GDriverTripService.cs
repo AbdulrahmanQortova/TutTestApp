@@ -63,11 +63,20 @@ public class GDriverTripService(
         // Subscribe to response channel and yield packets as they become available
         try
         {
+            await foreach (DriverTripPacket outPacket in _responseChannel.Reader.ReadAllAsync())
+            {
+                if (outPacket.Type != DriverTripPacketType.Unspecified && outPacket.Type != DriverTripPacketType.Success)
+                    yield return outPacket;
+            }
+            
+/*            
             var reader = _responseChannel.Reader;
             while (await reader.WaitToReadAsync(_cancellation.Token))
                 while (reader.TryRead(out var outPacket))
                     if (outPacket.Type != DriverTripPacketType.Unspecified && outPacket.Type != DriverTripPacketType.Success)
                         yield return outPacket;
+*/
+            
         }
         finally
         {

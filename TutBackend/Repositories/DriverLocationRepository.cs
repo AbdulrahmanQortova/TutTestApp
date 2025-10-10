@@ -10,7 +10,10 @@ public class DriverLocationRepository(TutDbContext context) : Repository<DriverL
     {
         return await _dbSet
             .GroupBy(dl => dl.DriverId)
-            .Select(group => group.OrderByDescending(dl => dl.Timestamp).FirstOrDefault()!)
+            .Select(group => group
+                .OrderByDescending(dl => dl.Timestamp)
+                .ThenByDescending(dl => dl.Id)
+                .FirstOrDefault()!)
             .ToListAsync();
     }
 
@@ -19,6 +22,7 @@ public class DriverLocationRepository(TutDbContext context) : Repository<DriverL
         return await _dbSet
             .Where(dl => dl.Timestamp > since && dl.DriverId == driverId)
             .OrderByDescending(dl => dl.Timestamp)
+            .ThenByDescending(dl => dl.Id)
             .ToListAsync();
     }
 }

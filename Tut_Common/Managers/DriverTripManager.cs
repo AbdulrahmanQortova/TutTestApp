@@ -80,7 +80,7 @@ public class DriverTripManager
 
                         SetConnectionState(ConnectionState.Connected);
 
-                        await foreach (var packet in responseStream.WithCancellation(linkedToken))
+                        await foreach (var packet in responseStream)
                         {
                             switch (packet.Type)
                             {
@@ -257,9 +257,9 @@ public class DriverTripManager
 
     public async Task Disconnect()
     {
+        _requestChannel?.Writer.TryComplete();
         if (_cts is not null)
             await _cts.CancelAsync();
-        _requestChannel?.Writer.TryComplete();
         if (_receiveLoopTask is not null)
         {
             try

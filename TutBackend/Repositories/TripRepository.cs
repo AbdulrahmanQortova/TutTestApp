@@ -43,7 +43,7 @@ public class TripRepository(TutDbContext context) : Repository<Trip>(context), I
             .Include(t => t.RequestedDriverPlace)
             .Include(t => t.RequestingPlace)
             .Include(t => t.Stops)
-            .Where(t => t.User.Id == userId)
+            .Where(t => t.User != null && t.User.Id == userId)
             .OrderBy(t => t.CreatedAt)
             .Skip(skip)
             .Take(take)
@@ -73,7 +73,7 @@ public class TripRepository(TutDbContext context) : Repository<Trip>(context), I
             .Include(t => t.RequestedDriverPlace)
             .Include(t => t.RequestingPlace)
             .Include(t => t.Stops)
-            .SingleOrDefaultAsync(t => t.User.Id == userId && t.Status != TripState.Unspecified && t.Status != TripState.Ended && t.Status != TripState.Canceled);
+            .SingleOrDefaultAsync(t => t.User != null && t.User.Id == userId && t.Status != TripState.Unspecified && t.Status != TripState.Ended && t.Status != TripState.Canceled);
     }
     public async Task<Trip?> GetActiveTripForDriver(int driverId)
     {

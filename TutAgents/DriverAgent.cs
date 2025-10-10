@@ -16,17 +16,15 @@ public class DriverAgent
     private readonly DriverTripManager _tripManager;
 
     // Hold background tasks so the compiler does not warn about unobserved tasks.
-    private Task? _locationConnectTask;
-    private Task? _tripConnectTask;
-    private Task? _punchInTask;
 
     // Map trip state to handler to reduce method complexity
     private readonly IReadOnlyDictionary<TripState, Func<Trip, CancellationToken, Task>> _stateHandlers;
-
+    private readonly string _username;
     public DriverAgent(string username, string password) : this(username, password, new Options()) { }
     public DriverAgent(string username, string password, Options options)
     {
         _options = options;
+        _username = username;
         GrpcClientFactory.AllowUnencryptedHttp2 = true;
         GrpcChannelFactory factory = new GrpcChannelFactory("http://localhost:5040");
         _currentLocation = RandomLocationInside(options.WanderBottomLeft, options.WanderTopRight);
@@ -40,8 +38,9 @@ public class DriverAgent
         var handlers = new Dictionary<TripState, Func<Trip, CancellationToken, Task>>
         {
             { TripState.Accepted, async (t, ct) => await HandleAcceptedAsync(t, ct) },
-            { TripState.DriverArrived, async (t, ct) => await HandleDriverArrivedAsync(t, ct) },
-            { TripState.AtStop, async (_, ct) => await HandleAtStopsAsync(ct) },
+            { TripState.DriverArrived, async (_, ct) => await HandleDriverArrivedAsync(_, ct) },
+            { TripState.Ongoing, async (t, ct) => await HandleOngoingAsync(t, ct) },
+            { TripState.AtStop, async (_, ct) => await HandleAtStopsAsync(_, ct) },
             { TripState.Arrived, async (t, ct) => await HandleArrivedAsync(t, ct) }
         };
 
@@ -63,7 +62,7 @@ public class DriverAgent
         _tripManager.StatusChanged += async (_, e) => await HandleStatusUpdate(e.Trip);
 
         // Start background connection tasks and keep references so they are not unobserved.
-        _locationConnectTask = _locationManager.Connect(_runCts.Token, TimeSpan.FromSeconds(2))
+        _ = _locationManager.Connect(_runCts.Token, TimeSpan.FromSeconds(2))
             .ContinueWith(t =>
             {
                 if (t.IsFaulted)
@@ -72,7 +71,7 @@ public class DriverAgent
                 }
             }, TaskContinuationOptions.ExecuteSynchronously);
 
-        _tripConnectTask = _tripManager.Connect(_runCts.Token)
+        _ = _tripManager.Connect(_runCts.Token)
             .ContinueWith(t =>
             {
                 if (t.IsFaulted)
@@ -81,7 +80,7 @@ public class DriverAgent
                 }
             }, TaskContinuationOptions.ExecuteSynchronously);
 
-        _punchInTask = _tripManager.SendPunchInAsync(_runCts.Token)
+        _ = _tripManager.SendPunchInAsync(_runCts.Token)
             .ContinueWith(t =>
             {
                 if (t.IsFaulted)
@@ -121,14 +120,15 @@ public class DriverAgent
                 _wanderCts = null;
             }
 
-            Console.WriteLine($"DA({_tripManager.CurrentTrip?.Driver?.Id})> Sending Ack");
+            Log("Sending Ack");
             await _tripManager.SendTripReceivedAsync();
             await Task.Delay(2000);
-            Console.WriteLine($"DA({_tripManager.CurrentTrip?.Driver?.Id})> Sending Accept");
+            Log("Sending Accept");
             await _tripManager.SendAcceptTripAsync();
         }
         catch (Exception ex)
         {
+            Log("Exception");
             Console.WriteLine("Offer handling error: " + ex.Message);
         }
     }
@@ -141,6 +141,7 @@ public class DriverAgent
 
         if (trip is null)
         {
+            Log("Received Null Trip in Status, Start Wandering");
             if (_wanderCts is null && !ct.IsCancellationRequested)
             {
                 _wanderCts = new CancellationTokenSource();
@@ -149,6 +150,7 @@ public class DriverAgent
             return;
         }
 
+        Log("Received Trip Status Update: " + trip.Status);
         // Delegate the detailed status processing to keep this method simple.
         await ProcessTripStatusAsync(trip, ct);
     }
@@ -168,51 +170,66 @@ public class DriverAgent
         }
         catch (Exception ex)
         {
-            Console.WriteLine("ProcessTripStatusAsync error: " + ex.Message);
+            Log("ProcessTripStatusAsync error: " + ex.Message);
         }
     }
 
     // Extracted helpers
     private Task SafeMoveToIndexAsync(Trip trip, int index, CancellationToken ct)
     {
+        Log($"Moving to Stop[{index}]");
         if (index < 0 || trip.Stops.Count <= index)
             return Task.CompletedTask;
         GLocation loc = trip.Stops[index].ToLocation();
         return MoveTo(loc, ct);
     }
 
-    private Task SendArriveOrStopAsync(Trip trip, int minStopsForStop, CancellationToken ct)
+    private Task SendArriveOrStopAsync(Trip trip, CancellationToken ct)
     {
-        return (trip.Stops.Count > minStopsForStop)
+        Log("Sending Arrived to Stop / Destination");
+        return (trip.NextStop < trip.Stops.Count -1)
             ? _tripManager.SendArrivedAtStopAsync(ct)
             : _tripManager.SendArrivedAtDestinationAsync(ct);
     }
 
     private async Task HandleAcceptedAsync(Trip trip, CancellationToken ct)
     {
+        Log("Handling Accept, Moving to Pickup");
         await SafeMoveToIndexAsync(trip, 0, ct);
         if (!ct.IsCancellationRequested)
             await _tripManager.SendArrivedAtPickupAsync(ct);
     }
 
-    private async Task HandleDriverArrivedAsync(Trip trip, CancellationToken ct)
+    private async Task HandleDriverArrivedAsync(Trip _, CancellationToken ct)
     {
+        Log("Handling Driver Arrived, Waiting, then Sending StartTrip");
         await Task.Delay(TimeSpan.FromSeconds(_options.ArrivalWaitTimeSeconds), ct);
         if (!ct.IsCancellationRequested)
-            await SafeMoveToIndexAsync(trip, 1, ct);
-        if (!ct.IsCancellationRequested)
-            await SendArriveOrStopAsync(trip, 2, ct);
+            await _tripManager.SendStartTripAsync(ct);
     }
 
-    private async Task HandleAtStopsAsync(CancellationToken ct)
+    private async Task HandleAtStopsAsync(Trip _, CancellationToken ct)
     {
+        Log("Handling At Stop, Waiting, then Sending ContinueTrip");
         await Task.Delay(TimeSpan.FromSeconds(_options.StopWaitTimeSeconds), ct);
         if (!ct.IsCancellationRequested)
             await _tripManager.SendContinueTripAsync(ct);
     }
 
+    private async Task HandleOngoingAsync(Trip trip, CancellationToken ct)
+    {
+        Log("Handling Ongoing, Moving to Next Stop");
+        await SafeMoveToIndexAsync(trip, trip.NextStop, ct);
+        if (!ct.IsCancellationRequested)
+            await SendArriveOrStopAsync(trip, ct);
+    }
+    
+    
+    
     private async Task HandleArrivedAsync(Trip trip, CancellationToken ct)
     {
+        Log("Handling Arrived, Waiting, then Acknowledging Cash Payment");
+        
         if (!ct.IsCancellationRequested)
             await Task.Delay(TimeSpan.FromSeconds(_options.PaymentWaitTimeSeconds), ct);
         if (!ct.IsCancellationRequested)
@@ -234,10 +251,6 @@ public class DriverAgent
         _runCts.Dispose();
         _runCts = new CancellationTokenSource();
 
-        // Observe background task exceptions to avoid unobserved task warnings.
-        _locationConnectTask?.ContinueWith(t => { var _ = t.Exception; }, TaskContinuationOptions.OnlyOnFaulted);
-        _tripConnectTask?.ContinueWith(t => { var _ = t.Exception; }, TaskContinuationOptions.OnlyOnFaulted);
-        _punchInTask?.ContinueWith(t => { var _ = t.Exception; }, TaskContinuationOptions.OnlyOnFaulted);
     }
 
     private CancellationTokenSource? _wanderCts;
@@ -294,7 +307,7 @@ public class DriverAgent
 
     private async Task StepTowards(GLocation location, int speed, CancellationToken ct)
     {
-        // Calculate meters to move during the 5 second interval.
+        // Calculate meters to move during the 5-second interval.
         // Assumes 'speed' is in km/h. 1 km/h == 1000/3600 m/s. Over 5s -> meters = speed * 1000/3600 * 5 == speed * (5.0/3.6)
         double metersToMove = speed * (5.0 / 3.6);
 
@@ -351,15 +364,20 @@ public class DriverAgent
         };
     }
 
+    private void Log(string str)
+    {
+        Console.WriteLine($"DA({_username})> {str}");
+    }
+    
+    
     public class Options
     {
         public int ArrivalWaitTimeSeconds { get; set; } = 20;
         public int StopWaitTimeSeconds { get; set; } = 20;
         public int PaymentWaitTimeSeconds { get; set; } = 20;
-        public int Speed { get; set; } = 200;
+        public int Speed { get; set; } = 1500;
         public readonly GLocation WanderBottomLeft = new GLocation { Latitude = 30, Longitude = 31.15 };
         public readonly GLocation WanderTopRight = new GLocation { Latitude = 30.15, Longitude = 31.5 };
     }
 }
 
-#pragma warning restore IDE0005 // restore analyzer

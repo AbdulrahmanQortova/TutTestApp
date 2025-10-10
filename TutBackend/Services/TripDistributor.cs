@@ -47,10 +47,11 @@ public class TripDistributor(
                     await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
                     continue;
                 }
+                bestDriver = await driverRepository.GetByIdAsync(bestDriver.Id);
 
                 // Assign driver and persist
                 trip.Driver = bestDriver;
-                bestDriver.State = DriverState.Requested;
+                bestDriver!.State = DriverState.Requested;
                 await driverRepository.UpdateAsync(bestDriver);
                 await tripRepository.UpdateAsync(trip);
                 logger.LogInformation("Assigned driver {DriverId} to trip {TripId}", bestDriver.Id, trip.Id);
