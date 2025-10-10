@@ -1,5 +1,7 @@
 using ProtoBuf;
 using System.ComponentModel.DataAnnotations;
+using Tut.Common.Dto.MapDtos;
+using Tut.Common.Utils;
 
 namespace Tut.Common.Models;
 
@@ -61,10 +63,26 @@ public class Trip
 
 
     [ProtoMember(23)]
-    public string Route { get; set; } = string.Empty;
+    public string Route { get; private set; } = string.Empty;
     
-
     public bool IsActive => Status is not (TripState.Unspecified or TripState.Ended or TripState.Canceled);
+
+    public void SetRoute(RouteDto? routeDto)
+    {
+        Route = routeDto?.OverviewPolyline?.Points ?? string.Empty;
+        if (routeDto is not null)
+        {
+            EstimatedDistance = (int)MapDtoUtils.GetRouteDistance(routeDto);
+            EstimatedTripDuration = (int)MapDtoUtils.GetRouteTime(routeDto);
+        }
+        else
+        {
+            // calculate the straight line distance, multiply it by 1.5 and set that to EstimationDistance
+            EstimatedDistance = (int)(LocationUtils.TotalDistanceInMeters(Stops.Select(s => s.ToLocation())) * 1.5);
+            // calculate the Estimated time based on distance, assuming a speed of 50 km/h
+            EstimatedTripDuration = (int)(EstimatedDistance / 50_000.0 * 60 * 60);
+        }
+    }
     
 }
 

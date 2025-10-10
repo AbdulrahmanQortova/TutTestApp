@@ -55,9 +55,11 @@ public enum UserTripPacketType
     StatusUpdate = 101,              // Server
     DriverLocationUpdate,
     Notification,
+    InquireResult,
     
     GetStatus = 1001,
     RequestTrip,
     CancelTrip,
+    InquireTrip,
 }
 

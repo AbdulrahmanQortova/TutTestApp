@@ -1,7 +1,9 @@
 using Grpc.Core;
 using ProtoBuf.Grpc;
 using System.Threading.Channels;
+using Tut.Common.Business;
 using Tut.Common.GServices;
+using Tut.Common.Managers;
 using Tut.Common.Models;
 using Tut.Common.Utils;
 using TutBackend.Repositories;
@@ -11,7 +13,9 @@ public class GUserTripService(
     IUserRepository userRepository,
     QipClient qipClient,
     IServiceScopeFactory scopeFactory,
-    ILogger<GDriverManagerService> logger
+    IPricingStrategy pricingStrategy,
+    DriverSelector driverSelector,
+    ILogger<GUserTripService> logger
     )
     : IGUserTripService
 {
@@ -19,8 +23,7 @@ public class GUserTripService(
     private Channel<UserTripPacket>? _responseChannel;
     // store ids only to avoid holding entity instances across threads
     private int _userId = -1; // -1 indicates no authenticated user
-    // no lingering entity references; we fetch fresh entities from scoped repos
-    private readonly CancellationTokenSource _cancellation = new ();
+    private CancellationTokenSource? _cancellation;
 
     public async IAsyncEnumerable<UserTripPacket> Connect(IAsyncEnumerable<UserTripPacket> requestPackets, CallContext context = default)
     {
@@ -28,58 +31,81 @@ public class GUserTripService(
         var resolvedUser = user ?? throw new RpcException(new Status(StatusCode.Unauthenticated, "Unauthorized"));
         _userId = resolvedUser.Id;
 
+        // Create cancellation token source linked to the gRPC context cancellation token
+        _cancellation = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken);
 
         _responseChannel = Channel.CreateBounded<UserTripPacket>(new BoundedChannelOptions(20)
         {
             FullMode = BoundedChannelFullMode.DropOldest
         });
 
+        // Store the cancellation token to avoid capturing the CTS in Task.Run
+        var cancellationToken = _cancellation.Token;
+
         // Background task: consume incoming request packets and act on them.
-        _ = Task.Run(() => ProcessIncomingRequestsAsync(requestPackets), CancellationToken.None);
-        _ = Task.Run(() => ReportTripStatusUpdates(_cancellation.Token), CancellationToken.None);
+        _ = Task.Run(async () => await ProcessIncomingRequestsAsync(requestPackets, cancellationToken), CancellationToken.None);
+        _ = Task.Run(async () => await ReportTripStatusUpdates(cancellationToken), CancellationToken.None);
 
         // Subscribe to response channel and yield packets as they become available
-        var reader = _responseChannel.Reader;
-        try
+        await foreach (var outPacket in _responseChannel.Reader.ReadAllAsync(cancellationToken).ConfigureAwait(false))
         {
-            while (await reader.WaitToReadAsync(_cancellation.Token))
-            {
-                while (reader.TryRead(out var outPacket))
-                {
-                    if(outPacket.Type != UserTripPacketType.Unspecified)
-                        yield return outPacket;
-                }
-            }
+            if(outPacket.Type != UserTripPacketType.Unspecified)
+                yield return outPacket;
         }
-        finally
-        {
-            // ensure channel is completed
-            _responseChannel.Writer.TryComplete();
-        }
-
+        
+        // Cleanup: This will run when the foreach completes (either normally or via cancellation)
+        await CleanupConnectionAsync();
     }
 
-    private async Task ProcessIncomingRequestsAsync(IAsyncEnumerable<UserTripPacket> requestPackets)
+    private async Task CleanupConnectionAsync()
+    {
+        // ensure channel is completed
+        _responseChannel?.Writer.TryComplete();
+
+        // Cancel and dispose the cancellation token source
+        if (_cancellation is not null)
+        {
+            try
+            {
+                await _cancellation.CancelAsync();
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to cancel user trip service cancellation token");
+            }
+            _cancellation.Dispose();
+            _cancellation = null;
+        }
+        
+        logger.LogInformation("User {UserId} disconnected from trip service", _userId);
+    }
+
+    private async Task ProcessIncomingRequestsAsync(IAsyncEnumerable<UserTripPacket> requestPackets, CancellationToken cancellationToken)
     {
         try
         {
-            await foreach (var packet in requestPackets.WithCancellation(_cancellation.Token))
+            await foreach (var packet in requestPackets.WithCancellation(cancellationToken))
             {
                 UserTripPacket res = await DispatchIncomingPacket(packet);
                 if(_responseChannel != null)
-                    await _responseChannel.Writer.WriteAsync(res, _cancellation.Token);
+                    await _responseChannel.Writer.WriteAsync(res, cancellationToken);
             }
         }
-        catch (OperationCanceledException) when (_cancellation.IsCancellationRequested)
+        catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
         {
             // expected cancellation
+            logger.LogDebug(ex, "ProcessIncomingRequestsAsync cancelled for user {UserId}", _userId);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Exception while ProcessingIncomingRequests in UserTripService");
         }
-        await _cancellation.CancelAsync();
-        _cancellation.Dispose();
+        finally
+        {
+            // Complete the channel writer so the main loop can exit
+            _responseChannel?.Writer.TryComplete();
+            logger.LogDebug("ProcessIncomingRequestsAsync completed for user {UserId}", _userId);
+        }
     }
     
     
@@ -102,26 +128,27 @@ public class GUserTripService(
     private async Task ReportTripStatusUpdates(CancellationToken cancellationToken)
     {
         TripState lastCommunicatedState = TripState.Unspecified;
-        while (!cancellationToken.IsCancellationRequested)
+        try
         {
-            await Task.Delay(10, cancellationToken);
-            if (_userId == -1) continue;
-            if (_responseChannel is null) continue;
-
-            try
+            while (!cancellationToken.IsCancellationRequested)
             {
+                await Task.Delay(10, cancellationToken);
+                if (_userId == -1) continue;
+                if (_responseChannel is null) continue;
+
                 using var scope = scopeFactory.CreateScope();
                 var scopedTripRepo = scope.ServiceProvider.GetRequiredService<ITripRepository>();
                 lastCommunicatedState = await ProcessAndWriteTripStatusAsync(scopedTripRepo, lastCommunicatedState, cancellationToken);
             }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                // expected
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error while reporting trip status updates");
-            }
+        }
+        catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
+        {
+            // expected cancellation
+            logger.LogDebug(ex, "ReportTripStatusUpdates cancelled for user {UserId}", _userId);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error while reporting trip status updates");
         }
     }
 
@@ -172,6 +199,20 @@ public class GUserTripService(
         await scopedTripRepo.UpdateAsync(currentTrip);
         return UserTripPacket.StatusUpdate(currentTrip);
     }
+
+
+    private async Task<UserTripPacket> HandleInquireTripAsync(Trip? trip)
+    {
+        if (trip is null) return UserTripPacket.Error("Trip Inquired without specifying the trip");
+
+        trip.EstimatedCost = pricingStrategy.Price(trip);
+        trip.EstimatedArrivalDuration = await driverSelector.EstimateDriverArrivalTime(trip);
+        return new UserTripPacket
+        {
+            Type = UserTripPacketType.InquireResult,
+            Trip = trip
+        };
+    }
     
     private async Task<UserTripPacket> DispatchIncomingPacket(UserTripPacket packet)
     {
@@ -192,6 +233,8 @@ public class GUserTripService(
                     return await HandleRequestTripAsync(scopedTripRepo, scopedUserRepo, packet.Trip);
                 case UserTripPacketType.CancelTrip:
                     return await HandleCancelTripAsync(scopedTripRepo);
+                case UserTripPacketType.InquireTrip:
+                    return await HandleInquireTripAsync(packet.Trip);
                 default:
                     // Unknown packet
                     logger.LogError("Unknown Packet Type: {Packet}", packet.ToJson());

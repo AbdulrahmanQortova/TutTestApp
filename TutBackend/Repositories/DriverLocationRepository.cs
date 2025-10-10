@@ -25,5 +25,6 @@ public class DriverLocationRepository(TutDbContext context) : Repository<DriverL
             .ThenByDescending(dl => dl.Id)
             .ToListAsync();
     }
+
 }
 

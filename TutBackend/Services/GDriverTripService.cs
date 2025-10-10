@@ -19,7 +19,7 @@ public class GDriverTripService(
     private Channel<DriverTripPacket>? _responseChannel;
     private int _driverId = -1;
     private int _activeTripId = -1;
-    private readonly CancellationTokenSource _cancellation = new ();
+    private CancellationTokenSource? _cancellation;
 
     // Offer tracking moved to instance fields to reduce method complexity and avoid ref/out in async helpers
     private DateTime _offerSentTimeStamp = DateTime.MinValue;
@@ -38,6 +38,9 @@ public class GDriverTripService(
         await driverRepository.UpdateAsync(authorizedDriver);
         _driverId = authorizedDriver.Id;
 
+        // Create cancellation token source linked to the gRPC context cancellation token
+        _cancellation = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken);
+
         _responseChannel = Channel.CreateBounded<DriverTripPacket>(new BoundedChannelOptions(20)
         {
             FullMode = BoundedChannelFullMode.DropOldest
@@ -52,63 +55,34 @@ public class GDriverTripService(
             await driverRepository.UpdateAsync(authorizedDriver);
         }
 
-        
-        
-        await _responseChannel.Writer.WriteAsync(DriverTripPacket.StatusUpdate(trip));
+        await _responseChannel.Writer.WriteAsync(DriverTripPacket.StatusUpdate(trip), _cancellation.Token);
 
+        // Store the cancellation token to avoid capturing the CTS in Task.Run
+        var cancellationToken = _cancellation.Token;
+        
         // Background task: consume incoming request packets and act on them.
-        _ = Task.Run(() => ProcessIncomingRequestsAsync(requestPackets), CancellationToken.None);
-        _ = Task.Run(() => WaitForTripAsync(_cancellation.Token), CancellationToken.None);
+        _ = Task.Run(async () => await ProcessIncomingRequestsAsync(requestPackets, cancellationToken), CancellationToken.None);
+        _ = Task.Run(async () => await WaitForTripAsync(cancellationToken), CancellationToken.None);
 
         // Subscribe to response channel and yield packets as they become available
-        try
+        // Note: yield return cannot be in try/catch, so we handle cancellation through the async enumerable
+        await foreach (DriverTripPacket outPacket in _responseChannel.Reader.ReadAllAsync(cancellationToken).ConfigureAwait(false))
         {
-            await foreach (DriverTripPacket outPacket in _responseChannel.Reader.ReadAllAsync())
-            {
-                if (outPacket.Type != DriverTripPacketType.Unspecified && outPacket.Type != DriverTripPacketType.Success)
-                    yield return outPacket;
-            }
+            if (outPacket.Type != DriverTripPacketType.Unspecified && outPacket.Type != DriverTripPacketType.Success)
+                yield return outPacket;
         }
-        finally
-        {
-            // ensure channel is completed
-            _responseChannel.Writer.TryComplete();
-
-            // Update driver state offline using a fresh scope to avoid cross-thread DbContext access
-            using var scope = scopeFactory.CreateScope();
-            IDriverRepository scopedDriverRepo = scope.ServiceProvider.GetRequiredService<IDriverRepository>();
-            if (_driverId != -1)
-            {
-                Driver? scopedDriver = await scopedDriverRepo.GetByIdAsync(_driverId);
-                if (scopedDriver is not null)
-                {
-                    scopedDriver.State = DriverState.Offline;
-                    await scopedDriverRepo.UpdateAsync(scopedDriver);
-                }
-            }
-        }
+        
+        // Cleanup: This will run when the foreach completes (either normally or via cancellation)
+        await CleanupConnectionAsync();
     }
 
-    private async Task ProcessIncomingRequestsAsync(IAsyncEnumerable<DriverTripPacket> requestPackets)
+    private async Task CleanupConnectionAsync()
     {
-        try
-        {
-            await foreach (var packet in requestPackets.WithCancellation(_cancellation.Token))
-            {
-                DriverTripPacket res = await DispatchIncomingPacket(packet);
-                if (_responseChannel != null)
-                    await _responseChannel.Writer.WriteAsync(res, _cancellation.Token);
-            }
-        }
-        catch (OperationCanceledException) when (_cancellation.IsCancellationRequested)
-        {
-            // expected cancellation
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Exception while ProcessingIncomingRequests in DriverTripService");
-        }
-        finally
+        // ensure channel is completed
+        _responseChannel?.Writer.TryComplete();
+
+        // Cancel and dispose the cancellation token source
+        if (_cancellation is not null)
         {
             try
             {
@@ -116,31 +90,75 @@ public class GDriverTripService(
             }
             catch (Exception ex)
             {
-                // Log cancellation failures - safe to continue cleanup
-                logger.LogWarning(ex, "Failed to cancel process incoming requests cancellation token");
+                logger.LogWarning(ex, "Failed to cancel driver trip service cancellation token");
             }
             _cancellation.Dispose();
+            _cancellation = null;
+        }
+
+        // Update driver state offline using a fresh scope to avoid cross-thread DbContext access
+        using var scope = scopeFactory.CreateScope();
+        IDriverRepository scopedDriverRepo = scope.ServiceProvider.GetRequiredService<IDriverRepository>();
+        if (_driverId != -1)
+        {
+            Driver? scopedDriver = await scopedDriverRepo.GetByIdAsync(_driverId);
+            if (scopedDriver is not null)
+            {
+                scopedDriver.State = DriverState.Offline;
+                await scopedDriverRepo.UpdateAsync(scopedDriver);
+                logger.LogInformation("Driver {Driver} set to Offline state on disconnect", scopedDriver.FullName);
+            }
         }
     }
 
-    private async Task WaitForTripAsync(CancellationToken cancellationToken = default)
+    private async Task ProcessIncomingRequestsAsync(IAsyncEnumerable<DriverTripPacket> requestPackets, CancellationToken cancellationToken)
     {
-        while (!cancellationToken.IsCancellationRequested)
+        try
         {
-            await Task.Delay(WaitForTripDelay, cancellationToken);
-            if (_driverId == -1 || _responseChannel is null) continue;
-            try
+            await foreach (var packet in requestPackets.WithCancellation(cancellationToken))
             {
+                DriverTripPacket res = await DispatchIncomingPacket(packet);
+                if (_responseChannel != null)
+                    await _responseChannel.Writer.WriteAsync(res, cancellationToken);
+            }
+        }
+        catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
+        {
+            // expected cancellation
+            logger.LogDebug(ex, "ProcessIncomingRequestsAsync cancelled for driver {DriverId}", _driverId);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Exception while ProcessingIncomingRequests in DriverTripService");
+        }
+        finally
+        {
+            // Complete the channel writer so the main loop can exit
+            _responseChannel?.Writer.TryComplete();
+            logger.LogDebug("ProcessIncomingRequestsAsync completed for driver {DriverId}", _driverId);
+        }
+    }
+
+    private async Task WaitForTripAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                await Task.Delay(WaitForTripDelay, cancellationToken);
+                if (_driverId == -1 || _responseChannel is null) continue;
+                
                 await TryCheckAndOfferAsync(cancellationToken);
             }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                // expected
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error while checking for trips in WaitForTripAsync");
-            }
+        }
+        catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
+        {
+            // expected cancellation
+            logger.LogDebug(ex, "WaitForTripAsync cancelled for driver {DriverId}", _driverId);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error in WaitForTripAsync");
         }
     }
 
@@ -148,8 +166,8 @@ public class GDriverTripService(
     {
         // Fetch fresh driver to check current state
         using var scope = scopeFactory.CreateScope();
-        var scopedTripRepo = (ITripRepository)scope.ServiceProvider.GetService(typeof(ITripRepository))!;
-        var scopedDriverRepo = (IDriverRepository)scope.ServiceProvider.GetService(typeof(IDriverRepository))!;
+        var scopedTripRepo = scope.ServiceProvider.GetRequiredService<ITripRepository>();
+        var scopedDriverRepo = scope.ServiceProvider.GetRequiredService<IDriverRepository>();
         var scopedDriver = await scopedDriverRepo.GetByIdAsync(_driverId);
         if (scopedDriver is null || scopedDriver.State != DriverState.Requested) return;
 
@@ -368,8 +386,8 @@ public class GDriverTripService(
         {
             // Resolve scoped repositories per incoming packet to avoid sharing DbContext across threads
             using var scope = scopeFactory.CreateScope();
-            var scopedDriverRepo = (IDriverRepository)scope.ServiceProvider.GetService(typeof(IDriverRepository))!;
-            var scopedTripRepo = (ITripRepository)scope.ServiceProvider.GetService(typeof(ITripRepository))!;
+            var scopedDriverRepo = scope.ServiceProvider.GetRequiredService<IDriverRepository>();
+            var scopedTripRepo = scope.ServiceProvider.GetRequiredService<ITripRepository>();
 
             switch (packet.Type)
             {

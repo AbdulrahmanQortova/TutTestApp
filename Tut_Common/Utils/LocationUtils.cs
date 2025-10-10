@@ -15,6 +15,28 @@ public static class LocationUtils
         return DistanceInKm(src, dst) * 1000;
     }
 
+    public static double TotalDistanceInMeters(IEnumerable<GLocation> locations)
+    {
+        using var enumerator = locations.GetEnumerator();
+
+        // No points or a single point -> zero distance
+        if (!enumerator.MoveNext())
+            return 0;
+        
+        var previous = enumerator.Current;
+        double total = 0;
+
+        while (enumerator.MoveNext())
+        {
+            var current = enumerator.Current;
+            total += DistanceInMeters(previous, current);
+            previous = current;
+        }
+        return total;
+    }
+    
+    
+    
     public static GLocation Towards(GLocation src, GLocation dst, double distance)
     {
         // Non-positive distance -> return source

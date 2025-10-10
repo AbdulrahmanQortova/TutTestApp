@@ -1,4 +1,6 @@
 using ProtoBuf.Grpc.Server;
+using Tut.Common.Business;
+using Tut.Common.Managers;
 using TutBackend.Data;
 using TutBackend.Repositories;
 using TutBackend.Services;
@@ -33,6 +35,7 @@ public static class Program
 
         // Register DriverSelector for injecting into TripDistributor
         builder.Services.AddTransient<DriverSelector>();
+        builder.Services.AddTransient<IPricingStrategy, BasicPricingStrategy>();
 
         // Register TripDistributor as a hosted background service
         builder.Services.AddHostedService<TripDistributor>();

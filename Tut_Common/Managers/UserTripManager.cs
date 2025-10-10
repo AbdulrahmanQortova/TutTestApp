@@ -47,6 +47,7 @@ public class UserTripManager
     public event EventHandler<NotificationReceivedEventArgs>? NotificationReceived;
     public event EventHandler<DriverLocationsReceivedEventArgs>? DriverLocationsReceived; 
     public event EventHandler<ConnectionStateChangedEventArgs>? ConnectionStateChanged;
+    public event EventHandler<InquireResultEventArgs>? InquireResultReceived; 
 
     public UserTripManager(
         string token,
@@ -124,6 +125,9 @@ public class UserTripManager
                                 case UserTripPacketType.DriverLocationUpdate:
                                     if(packet.DriverLocations != null)
                                         DriverLocationsReceived?.Invoke(this, new DriverLocationsReceivedEventArgs { Locations = packet.DriverLocations });
+                                    break;
+                                case UserTripPacketType.InquireResult:
+                                    InquireResultReceived?.Invoke(this, new InquireResultEventArgs{ Trip = packet.Trip });
                                     break;
                             }
                         }
@@ -236,6 +240,15 @@ public class UserTripManager
         return ms;
     }
 
+    public async Task SendInquireTripAsync(Trip trip, CancellationToken cancellationToken = default)
+    {
+        await SendAsync(new UserTripPacket
+        {
+            Type = UserTripPacketType.InquireTrip,
+            Trip = trip,
+        }, cancellationToken);
+    }
+
     public async Task SendRequestTripAsync(Trip trip, CancellationToken cancellationToken = default)
     {
         await SendAsync(new UserTripPacket
@@ -284,7 +297,6 @@ public class UserTripManager
         SetConnectionState(ConnectionState.Disconnected);
     }
 
-
 }
 
 
@@ -296,6 +308,10 @@ public enum ConnectionState
     Reconnecting
 }
 
+public class InquireResultEventArgs : EventArgs
+{
+    public Trip? Trip { get; set; }
+}
 public class StatusUpdateEventArgs : EventArgs
 {
     public Trip? Trip { get; set; }

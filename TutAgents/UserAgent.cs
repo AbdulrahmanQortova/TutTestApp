@@ -33,6 +33,7 @@ public class UserAgent
         _tripManager.DriverLocationsReceived += (_, e) => Console.WriteLine($"UA> Driver locations: {e.Locations.Count}");
         _tripManager.ConnectionStateChanged += (_, e) => Console.WriteLine($"UA> Connection state: {e.NewState}");
         _tripManager.StatusChanged += (_, e) => HandleStatusChanged(e.Trip);
+        _tripManager.InquireResultReceived += async (_, e) => await HandleInquireResultReceived(e.Trip);
 
         // Connect and start loop
         _ = _tripManager.Connect(token);
@@ -47,6 +48,16 @@ public class UserAgent
             return;
         }
         Console.WriteLine($"UA> Status changed: TripId={trip.Id} State={trip.Status} Driver={trip.Driver?.Id} / {trip.Driver?.State}");
+    }
+
+    private async Task HandleInquireResultReceived(Trip? trip)
+    {
+        if (trip is null)
+        {
+            Console.WriteLine("UA> InquireResult with null trip!");
+            return;
+        }
+        await _tripManager.SendRequestTripAsync(trip);
     }
 
     public void Stop()
@@ -76,14 +87,14 @@ public class UserAgent
 
             // Build a trip with pickup, 0-2 stops, and destination
             Trip trip = BuildRandomTrip();
-            Console.WriteLine($"UA> Requesting trip with {trip.Stops.Count} stops (including pickup and dropoff)");
+            Console.WriteLine($"UA> Inquiring trip with {trip.Stops.Count} stops (including pickup and dropoff)");
             try
             {
-                await _tripManager.SendRequestTripAsync(trip, token);
+                await _tripManager.SendInquireTripAsync(trip, token);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"UA> Failed to send RequestTrip: {ex.Message}");
+                Console.WriteLine($"UA> Failed to send InquireTrip: {ex.Message}");
             }
 
             // Event-based waiter: wait until StatusChanged indicates this trip ended/canceled
@@ -146,7 +157,7 @@ public class UserAgent
             Longitude = loc.Longitude
         };
 
-        int extraStops = rng.Next(0, 3); // 0,1,2 intermediate stops
+        int extraStops = rng.Next(0, _options.MaxNumberOfStops - 1); // 0,1,2 intermediate stops
         var stops = new List<Place> { pickup };
         for (int i = 0; i < extraStops; i++)
         {
@@ -178,7 +189,7 @@ public class UserAgent
             Stops = stops,
             Status = TripState.Requested
         };
-
+        trip.SetRoute(null);
         return trip;
     }
 
@@ -204,5 +215,6 @@ public class UserAgent
     {
         public readonly GLocation AreaBottomLeft = new GLocation { Latitude = 30, Longitude = 31.15 };
         public readonly GLocation AreaTopRight = new GLocation { Latitude = 30.15, Longitude = 31.5 };
+        public readonly int MaxNumberOfStops = 2;  // including pickup and dropOff.
     }
 }
