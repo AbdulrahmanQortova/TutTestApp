@@ -29,24 +29,30 @@ public class DriverLocationManagerService
 
     public event EventHandler<ErrorReceivedEventArgs>? ErrorReceived;
 
-    public DriverLocationManagerService(string accessToken, IGrpcChannelFactory channelFactory)
+    public DriverLocationManagerService(IGrpcChannelFactory channelFactory)
     {
         GrpcChannel grpcChannel = channelFactory.GetChannel();
         _driverLocationService = grpcChannel.CreateGrpcService<IGDriverLocationService>();
         Metadata metadata = [];
-        metadata.Add("Authorization", $"Bearer {accessToken}");
         _callOptions = new CallOptions(metadata);
     }
 
     // Test-friendly constructor: directly inject the gRPC service implementation
-    public DriverLocationManagerService(string accessToken, IGDriverLocationService driverLocationService)
+    public DriverLocationManagerService(IGDriverLocationService driverLocationService)
     {
         _driverLocationService = driverLocationService ?? throw new ArgumentNullException(nameof(driverLocationService));
+        Metadata metadata = [];
+        _callOptions = new CallOptions(metadata);
+    }
+
+    public void SetAccessToken(string accessToken)
+    {
         Metadata metadata = [];
         metadata.Add("Authorization", $"Bearer {accessToken}");
         _callOptions = new CallOptions(metadata);
     }
-
+    
+    
     /// <summary>
     /// Register the latest location locally. The background sender will emit the latest
     /// non-null location to the server every 5 seconds by default. For tests, pass a smaller interval to Connect.

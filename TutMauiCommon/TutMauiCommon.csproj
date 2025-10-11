@@ -22,10 +22,15 @@
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
         <PackageReference Include="Mapsui.Maui" Version="5.0.0-rc.1" />
         <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)"/>
+        <PackageReference Include="Plugin.LocalNotification" Version="12.0.2" />
     </ItemGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\Tut_Common\Tut_Common.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Services\" />
     </ItemGroup>
 
 </Project>

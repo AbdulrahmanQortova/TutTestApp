@@ -28,7 +28,8 @@ public class DriverAgent
         GrpcClientFactory.AllowUnencryptedHttp2 = true;
         GrpcChannelFactory factory = new GrpcChannelFactory("http://localhost:5040");
         _currentLocation = RandomLocationInside(options.WanderBottomLeft, options.WanderTopRight);
-        _locationManager = new DriverLocationManagerService(username, factory);
+        _locationManager = new DriverLocationManagerService(factory);
+        _locationManager.SetAccessToken(username);
         _tripManager = new DriverTripManager(username, factory);
 
         // use password in a no-op to avoid "parameter is never used" warnings without logging sensitive data

@@ -1,0 +1,75 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:pageModels="clr-namespace:TutDriver.PageModels"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             x:Class="TutDriver.Pages.HomePage"
+             x:DataType="pageModels:HomePageModel"
+             BackgroundColor="{DynamicResource PageBackgroundColor}"
+             Shell.NavBarHasShadow="False"
+             Shell.NavBarIsVisible="False">
+    
+    <ContentPage.Resources>
+        <toolkit:InvertedBoolConverter x:Key="InvertedBoolConverter" />
+    </ContentPage.Resources>
+    
+    <Grid RowDefinitions="Auto,Auto,*,Auto" ColumnDefinitions="*" Padding="20" RowSpacing="30">
+        <!-- Header -->
+        <Grid RowDefinitions="*,*"
+              ColumnDefinitions="50,*"
+              >
+            <Ellipse WidthRequest="40" 
+                     HeightRequest="40"
+                     Fill="Red" 
+                     IsVisible="{Binding IsOffline}"
+                     VerticalOptions="Center"
+                     HorizontalOptions="Center" />
+            <Ellipse WidthRequest="40" 
+                     HeightRequest="40"
+                     Fill="Yellow" 
+                     IsVisible="{Binding IsPunchedIn}"
+                     VerticalOptions="Center"
+                     HorizontalOptions="Center" />
+            <Ellipse WidthRequest="40" 
+                     HeightRequest="40"
+                     Fill="Green" 
+                     IsVisible="{Binding IsPunchedIn, Converter={StaticResource InvertedBoolConverter}}"
+                     VerticalOptions="Center"
+                     HorizontalOptions="Center" />
+            <Label Grid.Row="0" Grid.Column="1"
+                   Text="مرحبًا بك" 
+                   FontSize="16" 
+                   TextColor="Black"
+                   FontAttributes="Bold" />
+            <Label Grid.Row="1" Grid.Column="1"
+                   Text="{Binding FullName}"
+                   FontSize="16" 
+                   TextColor="Black"
+                   FontAttributes="Bold" />
+        </Grid>
+            <StackLayout Orientation="Horizontal" VerticalOptions="Center">
+            <StackLayout Orientation="Vertical" Spacing="2" HorizontalOptions="EndAndExpand" Margin="0,0,15,0">
+            </StackLayout>
+        </StackLayout>
+
+        <!-- Status Switch -->
+        <Border Grid.Row="1" BackgroundColor="#FCFCFF" Padding="5" Margin="0,25,0,0" StrokeThickness="1"
+                StrokeShape="RoundRectangle 10,10,10,10">
+            <Switch x:Name="PunchSwitch"
+                    IsToggled="{Binding IsPunchedIn, Mode=TwoWay}"
+                    HorizontalOptions="Start"
+                    VerticalOptions="Center" />
+        </Border>
+
+        <Button Grid.Row="2"
+                Text="استقبال الرحلة"
+                FontAttributes="Bold"
+                FontSize="16"
+                HorizontalOptions="Center"
+                VerticalOptions="Center"
+                Padding="0,0,20,10"
+                Command="{Binding AcceptTripCommand}"
+                />
+    </Grid>
+</ContentPage>
