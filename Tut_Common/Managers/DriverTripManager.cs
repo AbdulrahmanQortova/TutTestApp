@@ -36,15 +36,22 @@ public class DriverTripManager
     public event EventHandler<ErrorReceivedEventArgs>? ErrorReceived;
     public event EventHandler<ConnectionStateChangedEventArgs>? ConnectionStateChanged;
 
-    public DriverTripManager(string token, IGrpcChannelFactory channelFactory)
+    public DriverTripManager(IGrpcChannelFactory channelFactory)
     {
         GrpcChannel grpcChannel = channelFactory.GetChannel();
         _driverTripService = grpcChannel.CreateGrpcService<IGDriverTripService>();
         Metadata metadata = [];
-        metadata.Add("Authorization", $"Bearer {token}");
         _callOptions = new CallOptions(metadata);
     }
 
+    public void SetAccessToken(string token)
+    {
+        Metadata metadata = [];
+        metadata.Add("Authorization", $"Bearer {token}");
+        _callOptions = new CallOptions(metadata);
+    }
+    
+    
     public async Task Connect(CancellationToken cancellationToken)
     {
         if (_requestChannel is not null)

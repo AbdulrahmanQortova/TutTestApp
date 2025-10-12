@@ -8,6 +8,7 @@ namespace TutDriver.PageModels;
 
 public partial class HomePageModel(
     DriverLocationManagerService driverLocationManagerService,
+    DriverTripManager driverTripManager,
     ILocationService locationService,
     INotificationService notificationService
     ) : ObservableObject
@@ -18,16 +19,26 @@ public partial class HomePageModel(
     private bool _isPunchedIn;
     [ObservableProperty]
     private bool _isOffline;
+    [ObservableProperty]
+    private bool _isStartTripVisible;
 
     private bool _isInitialized;
 
     
     public async Task StartAsync()
     {
+        driverTripManager.OfferReceived += HandleOfferReceived;
+        driverTripManager.ConnectionStateChanged += HandleConnectionStateChanged;
         if (!_isInitialized) await InitializeAsync();
     }
 
-    public async Task InitializeAsync()
+    public Task StopAsync()
+    {
+        driverTripManager.OfferReceived -= HandleOfferReceived;
+        return Task.CompletedTask;
+    }
+
+    private async Task InitializeAsync()
     {
         _isInitialized = true;
         bool notificationEnabled = await notificationService.AreNotificationsEnabled();
@@ -78,12 +89,49 @@ public partial class HomePageModel(
         await locationService.StartLocationUpdates();
         
         driverLocationManagerService.SetAccessToken("DA10");
+        driverLocationManagerService.ErrorReceived += (_, e) => Shell.Current.DisplayAlert("Error", "LocationManager Error: " + e.ErrorText, "Ok");
         await driverLocationManagerService.Connect(CancellationToken.None);
+        
+        driverTripManager.SetAccessToken("DA10");
+        driverTripManager.ErrorReceived += (_, e) => Shell.Current.DisplayAlert("Error", "DriverTripManager Error: " + e.ErrorText, "Ok");
+        await driverTripManager.Connect(CancellationToken.None);
     }
     
     [RelayCommand]
     private async Task AcceptTripAsync()
     {
         
+    }
+
+    [RelayCommand]
+    private async Task PunchInAsync()
+    {
+        await driverTripManager.SendPunchInAsync();
+    }
+
+    [RelayCommand]
+    private async Task PunchOutAsync()
+    {
+        await driverTripManager.SendPunchOutAsync();
+    }
+
+    private void HandleOfferReceived(object? s, StatusUpdateEventArgs e)
+    {
+        IsStartTripVisible = true;
+        notificationService.Show(new NotificationRequest
+            {
+                NotificationId = 10000,
+                Title = "Tut Driver",
+                Description = "يوجد طلب وارد",
+                Android =
+                {
+                    ChannelId = "TripRequestChannel"
+                }
+            }
+        );
+    }
+    private async void HandleConnectionStateChanged(object? s, ConnectionStateChangedEventArgs e)
+    {
+        IsOffline = e.NewState != ConnectionState.Connected;
     }
 }

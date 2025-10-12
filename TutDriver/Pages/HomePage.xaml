@@ -21,12 +21,6 @@
               >
             <Ellipse WidthRequest="40" 
                      HeightRequest="40"
-                     Fill="Red" 
-                     IsVisible="{Binding IsOffline}"
-                     VerticalOptions="Center"
-                     HorizontalOptions="Center" />
-            <Ellipse WidthRequest="40" 
-                     HeightRequest="40"
                      Fill="Yellow" 
                      IsVisible="{Binding IsPunchedIn}"
                      VerticalOptions="Center"
@@ -35,6 +29,12 @@
                      HeightRequest="40"
                      Fill="Green" 
                      IsVisible="{Binding IsPunchedIn, Converter={StaticResource InvertedBoolConverter}}"
+                     VerticalOptions="Center"
+                     HorizontalOptions="Center" />
+            <Ellipse WidthRequest="40" 
+                     HeightRequest="40"
+                     Fill="Red" 
+                     IsVisible="{Binding IsOffline}"
                      VerticalOptions="Center"
                      HorizontalOptions="Center" />
             <Label Grid.Row="0" Grid.Column="1"
@@ -57,7 +57,8 @@
         <Border Grid.Row="1" BackgroundColor="#FCFCFF" Padding="5" Margin="0,25,0,0" StrokeThickness="1"
                 StrokeShape="RoundRectangle 10,10,10,10">
             <Switch x:Name="PunchSwitch"
-                    IsToggled="{Binding IsPunchedIn, Mode=TwoWay}"
+                    IsToggled="{Binding IsPunchedIn}"
+                    Toggled="OnTogglePunchSwitch"
                     HorizontalOptions="Start"
                     VerticalOptions="Center" />
         </Border>
@@ -69,6 +70,7 @@
                 HorizontalOptions="Center"
                 VerticalOptions="Center"
                 Padding="0,0,20,10"
+                IsVisible="{Binding IsStartTripVisible}"
                 Command="{Binding AcceptTripCommand}"
                 />
     </Grid>

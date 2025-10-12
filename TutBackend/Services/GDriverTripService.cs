@@ -132,7 +132,7 @@ public class GDriverTripService(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Exception while ProcessingIncomingRequests in DriverTripService");
+            logger.LogDebug(ex, "Exception while ProcessingIncomingRequests in DriverTripService");
         }
         finally
         {

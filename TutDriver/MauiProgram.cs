@@ -51,7 +51,8 @@ public static class MauiProgram
         builder.Services.AddSingleton<IGrpcChannelFactory>(new GrpcChannelFactory("http://localhost:5040"));
         
         builder.Services.AddSingleton<DriverLocationManagerService>();
-        builder.Services.AddSingleton<ILocationService, LocationService>();
+        builder.Services.AddSingleton<DriverTripManager>();
+        builder.Services.AddSingleton<ILocationService, MockLocationService>();
 
 
 

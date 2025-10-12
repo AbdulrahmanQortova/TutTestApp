@@ -30,7 +30,8 @@ public class DriverAgent
         _currentLocation = RandomLocationInside(options.WanderBottomLeft, options.WanderTopRight);
         _locationManager = new DriverLocationManagerService(factory);
         _locationManager.SetAccessToken(username);
-        _tripManager = new DriverTripManager(username, factory);
+        _tripManager = new DriverTripManager(factory);
+        _tripManager.SetAccessToken(username);
 
         // use password in a no-op to avoid "parameter is never used" warnings without logging sensitive data
         _ = password.Length;

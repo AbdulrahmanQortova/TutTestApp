@@ -1,0 +1,384 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="TutDriver.Pages.RequestPage"
+             xmlns:ctrls="clr-namespace:PegasusDriverApp.Views.Controls"
+             xmlns:mapsui="clr-namespace:Mapsui.UI.Maui;assembly=Mapsui.UI.Maui"
+             Shell.NavBarIsVisible="False"
+             FlowDirection="RightToLeft">
+    <views:BaseContentPage HasNavigationBar="True">
+        <views:BaseContentPage.ContentView>
+            <Grid RowDefinitions="*,auto" > 
+                <mapsui:MapView x:Name="mapView" 
+                        ZIndex="1"
+                        HorizontalOptions="FillAndExpand" VerticalOptions="FillAndExpand"/>
+                <!--  Details Section-->
+                <Frame
+                    Grid.Row="1"
+                    CornerRadius="30"
+                    Padding="12,12,12,50"
+                    Margin="0,0,0,-30"
+                    BackgroundColor="White"
+                    VerticalOptions="End" FlowDirection="RightToLeft">
+                    <VerticalStackLayout Spacing="15">
+                        <BoxView BackgroundColor="{StaticResource Gray300}"
+                                 WidthRequest="40"
+                                 HeightRequest="3" HorizontalOptions="Center"/>
+                        <Frame Padding="15" BorderColor="{StaticResource Gray100}"
+                           BackgroundColor="Transparent" CornerRadius="18">
+                            <Grid RowDefinitions="auto,auto,auto" RowSpacing="10">
+                                <Grid ColumnDefinitions="*,*">
+                                    <HorizontalStackLayout Spacing="2">
+                                        <Image Source="profile_circle.png"
+                                               VerticalOptions="Center" />
+                                        <Label Text="اسم العميل"
+                                               TextColor="#364B63"
+                                               FontAttributes="Bold"
+                                               FontFamily="Open Sans"
+                                               VerticalOptions="Center"
+                                               HorizontalOptions="End" 
+                                               FontSize="16"/>
+                                    </HorizontalStackLayout>
+                                    <Label Grid.Column="1" Text="{Binding Trip.UserData.Name}"
+                                           FontSize="16"
+                                           FontAttributes="Bold"
+                                           VerticalOptions="Center"
+                                           HorizontalOptions="Start" 
+                                           FontFamily="Open Sans"/>
+                                 </Grid>
+                                <BoxView Grid.Row="1" HeightRequest="1"
+                                     BackgroundColor="{StaticResource Gray100}"/>
+                                <!--Address Section--> 
+                                <HorizontalStackLayout Spacing="2" Grid.Row="2" Grid.ColumnSpan="2">
+                                    <Image Source="location.png"
+                                      HeightRequest="20"
+                                      VerticalOptions="Start" />
+                                    <Label Text="{Binding DestinationString}"
+                                      TextColor="{StaticResource DarkBackgroundColor}"
+                                       VerticalOptions="Center"
+                                       LineBreakMode="WordWrap"
+                                       FontAttributes="Bold"
+                                       MaximumWidthRequest="350"
+                                       FontFamily="Open Sans"
+                                       FontSize="16"/>
+                                </HorizontalStackLayout>
+                            </Grid>
+                        </Frame>
+                        <!--ContactClient-->
+                        <Frame IsVisible="{Binding ContactsVisibility}" Padding="10" BorderColor="{StaticResource Gray100}"
+                           BackgroundColor="Transparent" CornerRadius="14">
+                            <Grid ColumnDefinitions="*,auto,*">
+                                <BoxView Grid.Column="1" VerticalOptions="Fill"
+                                         Margin="10,0"
+                                         HorizontalOptions="Center"
+                                         WidthRequest="1"
+                                         Color="{StaticResource Gray200}"/>
+                                <VerticalStackLayout Spacing="2" Grid.Column="2">
+                                    <Grid ColumnDefinitions="0.5*, 0.5*">
+                                    <Border BackgroundColor="red" StrokeShape="RoundRectangle 10" 
+                                            WidthRequest="15" HeightRequest="15"
+                                                 HorizontalOptions="Start"
+                                                 IsVisible="{Binding IsChatStarted}"/>
+                                    <Image Source="vector.png"
+                                      WidthRequest="20"
+                                      HeightRequest="20"
+                                           HorizontalOptions="Start"
+                                           VerticalOptions="Center"
+                                           Grid.Column="1"/>
+                                    </Grid>
+
+                                    <Label Text="تواصل مع العميل"
+                                      TextColor="#131723"
+                                      HorizontalOptions="Center" 
+                                       FontAttributes="Bold"
+                                       FontFamily="Nunito"
+                                       FontSize="16"/>
+                                    <VerticalStackLayout.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding OpenChatCommand}"/>
+                                    </VerticalStackLayout.GestureRecognizers>
+                                </VerticalStackLayout>
+                                <VerticalStackLayout Spacing="2" Grid.Column="0">
+                                    <VerticalStackLayout.Triggers>
+                                        <DataTrigger TargetType="VerticalStackLayout" 
+                                                     Binding="{Binding IsDriverStartTrip}"  Value="True">
+                                            <Setter Property="IsVisible" Value="False" />
+                                        </DataTrigger> 
+                                    </VerticalStackLayout.Triggers>
+                                    <VerticalStackLayout.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding OpenClientLocationCommand}"/>
+                                    </VerticalStackLayout.GestureRecognizers>
+                                    <Image Source="vector.png"
+                                      WidthRequest="20"
+                                      HeightRequest="20"
+                                      HorizontalOptions="Center"
+                                      VerticalOptions="Center" />
+                                    <Label Text="موقع العميل"
+                                      TextColor="#131723"
+                                      HorizontalOptions="Center" 
+                                       FontAttributes="Bold"
+                                       FontFamily="Nunito"
+                                       FontSize="16"/>
+                                </VerticalStackLayout>
+                                <VerticalStackLayout Spacing="2" Grid.Column="0" IsVisible="{Binding StopVisibility}">
+                                    <VerticalStackLayout.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding OpenStopLocationCommand}"/>
+                                    </VerticalStackLayout.GestureRecognizers>
+                                    <Image Source="vector.png"
+                                           WidthRequest="20"
+                                           HeightRequest="20"
+                                           HorizontalOptions="Center"
+                                           VerticalOptions="Center" />
+                                    <Label Text="موقع التوقف"
+                                           TextColor="#131723"
+                                           HorizontalOptions="Center" 
+                                           FontAttributes="Bold"
+                                           FontFamily="Nunito"
+                                           FontSize="16"/>
+                                </VerticalStackLayout>
+                                <VerticalStackLayout Spacing="2" Grid.Column="0" IsVisible="{Binding EndTripVisibility}">
+                                    <VerticalStackLayout.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding OpenDestinationLocationCommand}"/>
+                                    </VerticalStackLayout.GestureRecognizers>
+                                    <Image Source="vector.png"
+                                      WidthRequest="20"
+                                      HeightRequest="20"
+                                      HorizontalOptions="Center"
+                                      VerticalOptions="Center" />
+                                    <Label Text="وجهة العميل"
+                                      TextColor="#131723"
+                                      HorizontalOptions="Center" 
+                                       FontAttributes="Bold"
+                                       FontFamily="Nunito"
+                                       FontSize="16"/>
+                                </VerticalStackLayout>
+                            </Grid>
+                        </Frame>
+
+                        <!--Payment amount-->
+                        <Frame IsVisible="{Binding PaymentViewVisibility}" Padding="10" BorderColor="{StaticResource Black}"
+                               BackgroundColor="Transparent" CornerRadius="14">
+                            <Grid ColumnDefinitions="*,auto,*">
+                                <BoxView Grid.Column="1" VerticalOptions="Fill"
+                                         Margin="10,0"
+                                         HorizontalOptions="Center"
+                                         WidthRequest="1"
+                                         Color="{StaticResource Gray200}"/>
+                                <Label Text="المبلغ المطلوب" FontAttributes="Bold" FontSize="18" HorizontalOptions="Center"/>
+                                <Label Grid.Column="2" FontSize="20" HorizontalOptions="Center">
+                                    <Label.FormattedText>
+                                        <FormattedString>
+                                            <Span  Text="{Binding Price}"  FontAttributes="Bold"/>
+                                            <Span  Text="جنيه" />
+                                        </FormattedString>
+                                    </Label.FormattedText>
+                                </Label>
+                            </Grid>
+                        </Frame>
+                        <Frame IsVisible="{Binding PaymentViewVisibility}" Padding="10" BorderColor="{StaticResource Black}"
+                               BackgroundColor="Transparent" CornerRadius="14">
+                            <Grid ColumnDefinitions="*,auto,*">
+                                <BoxView Grid.Column="1" VerticalOptions="Fill"
+                                         Margin="10,0"
+                                         HorizontalOptions="Center"
+                                         WidthRequest="1"
+                                         Color="{StaticResource Gray200}"/>
+                                <Label Text="المبلغ المدفوع" FontAttributes="Bold" FontSize="18" HorizontalOptions="Center"/>
+                                <Entry Grid.Column="2" FontSize="20" HorizontalOptions="Center" />
+                            </Grid>
+                        </Frame>
+
+                        <!--buttons-->
+                        <VerticalStackLayout FlowDirection="LeftToRight">
+                            <!--receive-->
+                            <Grid Padding="20,5" ColumnSpacing="10"
+                              IsVisible="{Binding RequestReceived}"
+                              VerticalOptions="End"
+                             BackgroundColor="{StaticResource Primary}">
+                            <Grid.GestureRecognizers>
+                                    
+                            <TapGestureRecognizer Command="{Binding ReceivedCommand}"/>
+                            
+                                    <SwipeGestureRecognizer Direction="Left" Command="{Binding ReceivedCommand}"/>
+                                </Grid.GestureRecognizers>
+                                <!--Accept Button-->
+                                
+                             
+                            <Label Text="استقبال الرحلة" 
+                                   TextColor="#131723"
+                                   Grid.Column="0" 
+                                   FontAttributes="Bold"
+                                   FontFamily="Nunito"
+                                   FontSize="22"
+                                   VerticalOptions="Center"
+                                   HorizontalOptions="Center"/>
+                                <ImageButton
+                                   HorizontalOptions="End"
+        
+                                   BackgroundColor="Transparent"
+                                   Margin="5,0"
+                                   HeightRequest="55" WidthRequest="50"/>
+
+                            </Grid>
+                            <!--<Grid IsVisible="{Binding RequestReceived}">
+                                <ctrls:SwipeButton Title="استقبال الرحلة" SwipeCompleted="Received"
+                                                    TitleColor="#131723"/>
+                            </Grid>-->
+                            <!--AArrived-->
+                            <Grid Padding="20,5" ColumnSpacing="10"
+                              IsVisible="{Binding ArrivedToClientVisibility}"
+                              VerticalOptions="End"
+                             BackgroundColor="{StaticResource Primary}">
+                            <Grid.GestureRecognizers>
+                                    
+                            <TapGestureRecognizer Command="{Binding ArrivedCommand}"/>
+                            
+                                    <SwipeGestureRecognizer Direction="Left" Command="{Binding ArrivedCommand}"/>
+                                </Grid.GestureRecognizers>
+                            <Label Text="تسجيل الوصول" 
+                                   TextColor="#131723"
+                                   Grid.Column="0" 
+                                   FontAttributes="Bold"
+                                   FontFamily="Nunito"
+                                   FontSize="22"
+                                   VerticalOptions="Center"
+                                   HorizontalOptions="Center"/>
+                                <ImageButton
+                                HorizontalOptions="End"
+                                 
+                                BackgroundColor="Transparent"
+                                Margin="5,0"
+                                HeightRequest="55" WidthRequest="50"/>
+                          
+                          
+                        </Grid>
+                            <!--<Grid IsVisible="{Binding ArrivedToClientVisiblity}">
+                                <ctrls:SwipeButton Title="تسجيل الوصول" SwipeCompleted="Arrived" IsVisible="{Binding ArrivedToClientVisiblity}"
+                                               TitleColor="#131723"/>
+                            </Grid>-->
+                            <!--Start trip-->
+                            <Grid Padding="20,5" ColumnSpacing="10"
+                              IsVisible="{Binding StartTripVisibility}"
+                              VerticalOptions="End"
+                             BackgroundColor="{StaticResource GreenColor}">
+                            <Grid.GestureRecognizers>
+                                    
+                            <TapGestureRecognizer Command="{Binding StartTripCommand}"/>
+                            
+                                    <SwipeGestureRecognizer Direction="Left" Command="{Binding StartTripCommand}"/>
+                                </Grid.GestureRecognizers>
+                            <Label Text="بداية الرحلة" 
+                                   TextColor="White"
+                                   Grid.Column="0" 
+                                   FontAttributes="Bold"
+                                   FontFamily="Nunito"
+                                   FontSize="22"
+                                   VerticalOptions="Center"
+                                   HorizontalOptions="Center"/>
+                                <ImageButton
+         HorizontalOptions="End"
+        
+         BackgroundColor="Transparent"
+         Margin="5,0"
+         HeightRequest="55" WidthRequest="50"/>
+
+                            </Grid>
+                            <Grid Padding="20,5" ColumnSpacing="10"
+                                  IsVisible="{Binding StopVisibility}"
+                                  VerticalOptions="End"
+                                  BackgroundColor="{StaticResource GreenColor}">
+                                <Grid.GestureRecognizers>
+                                    
+                                    <TapGestureRecognizer Command="{Binding CompleteStopCommand}"/>
+                            
+                                    <SwipeGestureRecognizer Direction="Left" Command="{Binding CompleteStopCommand}"/>
+                                </Grid.GestureRecognizers>
+                                <Label Text="وصول للتوقف" 
+                                       TextColor="White"
+                                       Grid.Column="0" 
+                                       FontAttributes="Bold"
+                                       FontFamily="Nunito"
+                                       FontSize="22"
+                                       VerticalOptions="Center"
+                                       HorizontalOptions="Center"/>
+                                <ImageButton
+                                    HorizontalOptions="End"
+        
+                                    BackgroundColor="Transparent"
+                                    Margin="5,0"
+                                    HeightRequest="55" WidthRequest="50"/>
+
+                            </Grid>
+                            <!--<Grid IsVisible="{Binding StartTripVisiblity}">
+                                <ctrls:SwipeButton Title="بداية الرحلة" SwipeCompleted="StartTrip" IsVisible="{Binding StartTripVisiblity}"
+                                               StatusColor="{StaticResource GreenColor}"/>
+                            </Grid>-->
+                            <!--End trip-->
+                            <Grid Padding="20,5" ColumnSpacing="10"
+                              VerticalOptions="End"
+                              IsVisible="{Binding EndTripVisibility}"
+                             BackgroundColor="{StaticResource RedColor}">
+                            <Grid.GestureRecognizers>
+                                    
+                            <TapGestureRecognizer Command="{Binding EndTripCommand}"/>
+                            
+                                    <SwipeGestureRecognizer Direction="Left" Command="{Binding EndTripCommand}"/>
+                                </Grid.GestureRecognizers>
+                            <Label Text="انهاء الرحلة" 
+                                   TextColor="White"
+                                   Grid.Column="0" 
+                                   FontAttributes="Bold"
+                                   FontFamily="Nunito"
+                                   FontSize="22"
+                                   VerticalOptions="Center"
+                                   HorizontalOptions="Center"/>
+                                <ImageButton
+         HorizontalOptions="End"
+        
+         BackgroundColor="Transparent"
+         Margin="5,0"
+         HeightRequest="55" WidthRequest="50"/>
+
+                            </Grid>
+                            <!--<Grid IsVisible="{Binding EndTripVisiblity}">
+                                <ctrls:SwipeButton Title="إنهاء الرحلة" SwipeCompleted="EndTrip" IsVisible="{Binding EndTripVisiblity}"
+                                               StatusColor="{StaticResource RedColor}"/>
+                            </Grid>-->
+                            <!--Done payment-->
+                            <Grid Padding="20,5" ColumnSpacing="10"
+                              VerticalOptions="End"
+                              IsVisible="{Binding PaymentViewVisibility}"
+                             BackgroundColor="Black">
+                            <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding PaymentDoneCommand}"/>
+                                    <SwipeGestureRecognizer Direction="Left" Command="{Binding PaymentDoneCommand}"/>
+                                </Grid.GestureRecognizers>
+                            <Label Text="اكمال الدفع" 
+                                   TextColor="White"
+                                   Grid.Column="0" 
+                                   FontAttributes="Bold"
+                                   FontFamily="Nunito"
+                                   FontSize="22"
+                                   VerticalOptions="Center"
+                                   HorizontalOptions="Center"/>
+                                <ImageButton
+         HorizontalOptions="End"
+        
+         BackgroundColor="Transparent"
+         Margin="5,0"
+         HeightRequest="55" WidthRequest="50"/>
+
+                            </Grid>
+                            <!--<Grid IsVisible="{Binding PaymentViewVisiblity}">
+                                <ctrls:SwipeButton Title="إكمال الدفع" SwipeCompleted="PaymentDone" IsVisible="{Binding PaymentViewVisiblity}"
+                                               StatusColor="Black"/>
+                            </Grid>-->
+                        </VerticalStackLayout>
+                        <BoxView BackgroundColor="{StaticResource Gray100}"
+                                 HeightRequest="3"
+                                 WidthRequest="100"/>
+                    </VerticalStackLayout>
+                </Frame>
+            </Grid>
+        </views:BaseContentPage.ContentView>
+    </views:BaseContentPage>
+</ContentPage>
