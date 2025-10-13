@@ -132,7 +132,7 @@ public class GUserTripService(
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                await Task.Delay(10, cancellationToken);
+                await Task.Delay(1000, cancellationToken);
                 if (_userId == -1) continue;
                 if (_responseChannel is null) continue;
 

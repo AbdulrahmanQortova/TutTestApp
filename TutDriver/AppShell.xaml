@@ -10,6 +10,9 @@
         <ShellContent 
             Icon="home.png"
             ContentTemplate="{DataTemplate pages:HomePage}" />
+        <ShellContent 
+            Icon="home.png"
+            ContentTemplate="{DataTemplate pages:TripPage}" />
     </TabBar>
 
 </Shell>

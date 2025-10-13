@@ -28,16 +28,17 @@
 	</array>
 	<key>XSAppIconAssets</key>
 	<string>Assets.xcassets/appicon.appiconset</string>
-    <key>UIBackgroundModes</key>
-    <array>
-        <string>fetch</string>
-        <string>remote-notification</string>
-    </array>
-    <key>NSLocationWhenInUseUsageDescription</key>
-    <string>Tut Driver requires accessing your location all the time.</string>
-    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-    <string>Tut Driver requires accessing your location all the time.</string>
-    <key>NSLocationAlwaysUsageDescription</key>
-    <string>Tut Driver requires accessing your location all the time.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>remote-notification</string>
+		<string>location</string>
+	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Tut Driver requires accessing your location all the time.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Tut Driver requires accessing your location all the time.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Tut Driver requires accessing your location all the time.</string>
 </dict>
 </plist>

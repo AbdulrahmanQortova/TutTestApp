@@ -5,7 +5,7 @@ internal static class Program
     private static void Main()
     {
 
-        const int numDrivers = 1;
+        const int numDrivers = 0;
         const int numUsers = 1;
         List<DriverAgent> drivers = [];
         List<UserAgent> users = [];

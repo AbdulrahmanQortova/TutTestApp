@@ -95,12 +95,18 @@ public partial class HomePageModel(
         driverTripManager.SetAccessToken("DA10");
         driverTripManager.ErrorReceived += (_, e) => Shell.Current.DisplayAlert("Error", "DriverTripManager Error: " + e.ErrorText, "Ok");
         await driverTripManager.Connect(CancellationToken.None);
+
+        Shell.Current.CurrentPage.GetParentWindow().Stopped += (_, _) =>
+        {
+            _ = driverTripManager.Disconnect();
+            _ = driverLocationManagerService.Disconnect();
+        };
     }
     
     [RelayCommand]
     private async Task AcceptTripAsync()
     {
-        
+        await driverTripManager.SendAcceptTripAsync();
     }
 
     [RelayCommand]
@@ -115,10 +121,11 @@ public partial class HomePageModel(
         await driverTripManager.SendPunchOutAsync();
     }
 
-    private void HandleOfferReceived(object? s, StatusUpdateEventArgs e)
+    private async void HandleOfferReceived(object? s, StatusUpdateEventArgs e)
     {
         IsStartTripVisible = true;
-        notificationService.Show(new NotificationRequest
+        await driverTripManager.SendTripReceivedAsync();
+        await notificationService.Show(new NotificationRequest
             {
                 NotificationId = 10000,
                 Title = "Tut Driver",

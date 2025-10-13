@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using Plugin.LocalNotification;
 using Plugin.LocalNotification.AndroidOption;
+using SkiaSharp.Views.Maui.Controls.Hosting;
 using Tut.Common.GServices;
 using Tut.Common.Managers;
 using TutDriver.PageModels;
@@ -17,6 +18,7 @@ public static class MauiProgram
         builder
             .UseMauiApp<App>()
             .UseMauiCommunityToolkit()
+            .UseSkiaSharp()
             .UseLocalNotification(config =>
             {
                 config.AddAndroid(android =>
@@ -57,6 +59,7 @@ public static class MauiProgram
 
 
         builder.Services.AddTransient<HomePageModel>();
+        builder.Services.AddTransient<TripPageModel>();
         
         return builder.Build();
     }

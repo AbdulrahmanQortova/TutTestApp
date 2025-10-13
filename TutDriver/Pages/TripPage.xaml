@@ -1,0 +1,238 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="TutDriver.Pages.TripPage"
+             xmlns:mapsui="clr-namespace:Mapsui.UI.Maui;assembly=Mapsui.UI.Maui"
+             xmlns:pageModels="clr-namespace:TutDriver.PageModels"
+             x:DataType="pageModels:TripPageModel"
+             Shell.NavBarIsVisible="False">
+    
+    <Grid RowDefinitions="*,Auto">
+        
+        <!-- Map View -->
+        <mapsui:MapView x:Name="MapControl" 
+                        ZIndex="1"
+                        />
+        
+        <!-- Details Section -->
+        <Border Grid.Row="1"
+                StrokeShape="RoundRectangle 30,30,0,0"
+                Stroke="Transparent"
+                Padding="12,12,12,50"
+                Margin="0,0,0,-30"
+                BackgroundColor="White"
+                VerticalOptions="End" 
+                >
+            
+            <VerticalStackLayout Spacing="15">
+                
+                <!-- Drag Handle -->
+                <BoxView BackgroundColor="{StaticResource Gray300}"
+                         WidthRequest="40"
+                         HeightRequest="3" 
+                         HorizontalOptions="Center"/>
+                
+                <!-- Client Information Section -->
+                <Border Padding="15" 
+                        Stroke="{StaticResource Gray100}"
+                        StrokeThickness="1"
+                        BackgroundColor="Transparent" 
+                        StrokeShape="RoundRectangle 18">
+                    
+                    <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="10">
+                        
+                        <!-- Client Name Row -->
+                        <Grid ColumnDefinitions="*,*">
+                            <HorizontalStackLayout Spacing="2">
+                                <Image Source="profile_circle.png"
+                                       VerticalOptions="Center" />
+                                <Label Text="Client Name"
+                                       TextColor="#364B63"
+                                       FontAttributes="Bold"
+                                       FontFamily="Open Sans"
+                                       VerticalOptions="Center"
+                                       HorizontalOptions="End" 
+                                       FontSize="16"/>
+                            </HorizontalStackLayout>
+                            
+                            <Label Grid.Column="1" 
+                                   Text="{Binding ClientName}"
+                                   FontSize="16"
+                                   FontAttributes="Bold"
+                                   VerticalOptions="Center"
+                                   HorizontalOptions="Start" 
+                                   FontFamily="Open Sans"/>
+                        </Grid>
+                        
+                        <!-- Separator -->
+                        <BoxView Grid.Row="1" 
+                                 HeightRequest="1"
+                                 BackgroundColor="{StaticResource Gray100}"/>
+                        
+                        <!-- Address Section -->
+                        <HorizontalStackLayout Grid.Row="2" 
+                                               Spacing="2">
+                            <Image Source="location.png"
+                                   HeightRequest="20"
+                                   VerticalOptions="Start" />
+                            <Label Text="{Binding Destination}"
+                                   TextColor="{StaticResource DarkBackgroundColor}"
+                                   VerticalOptions="Center"
+                                   LineBreakMode="WordWrap"
+                                   FontAttributes="Bold"
+                                   MaximumWidthRequest="350"
+                                   FontFamily="Open Sans"
+                                   FontSize="16"/>
+                        </HorizontalStackLayout>
+                    </Grid>
+                </Border>
+                
+                <!-- Contact Client Section -->
+                <Border Padding="10" 
+                        Stroke="{StaticResource Gray100}"
+                        StrokeThickness="1"
+                        BackgroundColor="Transparent" 
+                        StrokeShape="RoundRectangle 14">
+                    <Grid ColumnDefinitions="*,Auto,*">
+                        <!-- Vertical Separator -->
+                        <BoxView Grid.Column="1" 
+                                 VerticalOptions="Fill"
+                                 Margin="10,0"
+                                 HorizontalOptions="Center"
+                                 WidthRequest="1"
+                                 Color="{StaticResource Gray200}"/>
+                        
+                        <!-- Chat with Client -->
+                        <VerticalStackLayout Grid.Column="2" 
+                                             Spacing="2">
+                            <VerticalStackLayout.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding OpenClientChatCommand}"/>
+                            </VerticalStackLayout.GestureRecognizers>
+                            
+                            <Grid ColumnDefinitions="0.5*,0.5*">
+                                <Border BackgroundColor="Red" 
+                                        StrokeShape="RoundRectangle 10"
+                                        Stroke="Transparent"
+                                        WidthRequest="15" 
+                                        HeightRequest="15"
+                                        HorizontalOptions="Start"
+                                        />
+                                
+                                <Label Text="Contact Client"
+                                       TextColor="#131723"
+                                       HorizontalOptions="Center" 
+                                       FontAttributes="Bold"
+                                       FontFamily="Nunito"
+                                       FontSize="16"/>
+
+                                <Image Grid.Column="1"
+                                       Source="chat.png"
+                                       WidthRequest="20"
+                                       HeightRequest="20"
+                                       HorizontalOptions="Start"
+                                       VerticalOptions="Center"/>
+                            </Grid>
+                            
+                        </VerticalStackLayout>
+                        
+                        <!-- Client Location -->
+                        <VerticalStackLayout Grid.Column="0" 
+                                             Spacing="2">
+                            <VerticalStackLayout.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding OpenLocationCommand}"/>
+                            </VerticalStackLayout.GestureRecognizers>
+                            
+                            <Image Source="vector.png"
+                                   WidthRequest="20"
+                                   HeightRequest="20"
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="Center" />
+                            <Label Text="{Binding NextStopTitle}"
+                                   TextColor="#131723"
+                                   HorizontalOptions="Center" 
+                                   FontAttributes="Bold"
+                                   FontFamily="Nunito"
+                                   FontSize="16"/>
+                        </VerticalStackLayout>
+                        
+                    </Grid>
+                </Border>
+                
+                <!-- Payment Amount Section -->
+                <Border Padding="10" 
+                        Stroke="{StaticResource Black}"
+                        StrokeThickness="1"
+                        BackgroundColor="Transparent" 
+                        StrokeShape="RoundRectangle 14">
+                    
+                    <Grid ColumnDefinitions="*,Auto,*">
+                        <BoxView Grid.Column="1" 
+                                 VerticalOptions="Fill"
+                                 Margin="10,0"
+                                 HorizontalOptions="Center"
+                                 WidthRequest="1"
+                                 Color="{StaticResource Gray200}"/>
+                        
+                        <Label Text="Fare" 
+                               FontAttributes="Bold" 
+                               FontSize="18" 
+                               HorizontalOptions="Center"/>
+                        
+                        <Label Grid.Column="2" 
+                               FontSize="20" 
+                               HorizontalOptions="Center">
+                            <Label.FormattedText>
+                                <FormattedString>
+                                    <Span Text="{Binding RequestedPaymentAmount}" FontAttributes="Bold"/>
+                                    <Span Text="جنيه" />
+                                </FormattedString>
+                            </Label.FormattedText>
+                        </Label>
+                    </Grid>
+                </Border>
+                
+                <!-- Payment Input Section -->
+                <Border Padding="10" 
+                        Stroke="{StaticResource Black}"
+                        StrokeThickness="1"
+                        BackgroundColor="Transparent" 
+                        StrokeShape="RoundRectangle 14">
+                    
+                    <Grid ColumnDefinitions="*,Auto,*">
+                        <BoxView Grid.Column="1" 
+                                 VerticalOptions="Fill"
+                                 Margin="10,0"
+                                 HorizontalOptions="Center"
+                                 WidthRequest="1"
+                                 Color="{StaticResource Gray200}"/>
+                        
+                        <Label Text="Paid Amount" 
+                               FontAttributes="Bold" 
+                               FontSize="18" 
+                               HorizontalOptions="Center"/>
+                        
+                        <Entry Grid.Column="2" 
+                               FontSize="20" 
+                               HorizontalOptions="Center" 
+                               Keyboard="Numeric"/>
+                    </Grid>
+                </Border>
+                
+                <!-- Action Buttons Section -->
+                <VerticalStackLayout Spacing="0">
+                    <Button BackgroundColor="{DynamicResource PrimaryColor}"
+                            CornerRadius="10"
+                            Text = "{Binding ProgressTripActionTitle}"
+                            Command="{Binding ProgressTripActionCommand}"
+                        />
+                </VerticalStackLayout>
+                
+                <!-- Bottom Indicator -->
+                <BoxView BackgroundColor="{StaticResource Gray100}"
+                         HeightRequest="3"
+                         WidthRequest="100"
+                         HorizontalOptions="Center"/>
+            </VerticalStackLayout>
+        </Border>
+    </Grid>
+</ContentPage>

@@ -7,7 +7,6 @@
              x:Class="TutDriver.Pages.HomePage"
              x:DataType="pageModels:HomePageModel"
              BackgroundColor="{DynamicResource PageBackgroundColor}"
-             Shell.NavBarHasShadow="False"
              Shell.NavBarIsVisible="False">
     
     <ContentPage.Resources>
