@@ -102,6 +102,7 @@ public partial class TripPageModel(
         if (trip is null)
         {
             // Navigate to HomePage
+            Shell.Current.GoToAsync("..");
             return;
         }
 

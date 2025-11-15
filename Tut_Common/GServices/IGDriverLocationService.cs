@@ -2,7 +2,6 @@ using ProtoBuf.Grpc.Configuration;
 using ProtoBuf.Grpc;
 using Tut.Common.Models;
 
-
 namespace Tut.Common.GServices;
 
 [Service]

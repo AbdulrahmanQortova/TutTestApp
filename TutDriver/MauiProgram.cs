@@ -50,7 +50,8 @@ public static class MauiProgram
 #endif
 
 //        builder.Services.AddSingleton<IGrpcChannelFactory>(new GrpcChannelFactory("http://qortova.com:8080"));
-        builder.Services.AddSingleton<IGrpcChannelFactory>(new GrpcChannelFactory("http://localhost:5040"));
+//        builder.Services.AddSingleton<IGrpcChannelFactory>(new GrpcChannelFactory("http://localhost:5040"));
+        builder.Services.AddSingleton<IGrpcChannelFactory>(new GrpcChannelFactory("http://10.0.2.2:5040"));
         
         builder.Services.AddSingleton<DriverLocationManagerService>();
         builder.Services.AddSingleton<DriverTripManager>();

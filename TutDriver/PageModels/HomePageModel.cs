@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using Plugin.LocalNotification;
 using Tut.Common.Managers;
 using Tut.Common.Models;
+using TutDriver.Pages;
 using TutDriver.Services;
 namespace TutDriver.PageModels;
 
@@ -29,12 +30,15 @@ public partial class HomePageModel(
     {
         driverTripManager.OfferReceived += HandleOfferReceived;
         driverTripManager.ConnectionStateChanged += HandleConnectionStateChanged;
+        driverTripManager.StatusChanged += HandleTripManagerStatusChanged;
         if (!_isInitialized) await InitializeAsync();
     }
 
     public Task StopAsync()
     {
         driverTripManager.OfferReceived -= HandleOfferReceived;
+        driverTripManager.ConnectionStateChanged -= HandleConnectionStateChanged;
+        driverTripManager.StatusChanged -= HandleTripManagerStatusChanged;
         return Task.CompletedTask;
     }
 
@@ -70,6 +74,7 @@ public partial class HomePageModel(
         await locationService.SetupBackgroundLocation();
         locationService.LocationChanged += (_, e) =>
         {
+            /*
             notificationService.Show(new NotificationRequest
             {
                 NotificationId = 10000,
@@ -80,6 +85,7 @@ public partial class HomePageModel(
                     ChannelId = "ForegroundServiceChannel"
                 }
             });
+            */
             driverLocationManagerService.RegisterLocation(new GLocation
             {
                 Latitude = e.Location.Latitude,
@@ -137,7 +143,15 @@ public partial class HomePageModel(
             }
         );
     }
-    private async void HandleConnectionStateChanged(object? s, ConnectionStateChangedEventArgs e)
+
+    private async void HandleTripManagerStatusChanged(object? s, StatusUpdateEventArgs e)
+    {
+        if (driverTripManager.CurrentTrip is null) return;
+        if(driverTripManager.CurrentTrip.Status != TripState.Requested && driverTripManager.CurrentTrip.Status != TripState.Acknowledged && driverTripManager.CurrentTrip.Status != TripState.Ended)
+            MainThread.BeginInvokeOnMainThread(async () => await Shell.Current.GoToAsync(nameof(TripPage)));
+    }
+    
+    private void HandleConnectionStateChanged(object? s, ConnectionStateChangedEventArgs e)
     {
         IsOffline = e.NewState != ConnectionState.Connected;
     }

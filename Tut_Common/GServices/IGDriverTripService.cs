@@ -3,7 +3,7 @@ using ProtoBuf.Grpc.Configuration;
 using Tut.Common.Models;
 namespace Tut.Common.GServices;
 
-[Service]
+[ProtoBuf.Grpc.Configuration.Service]
 public interface IGDriverTripService
 {
     IAsyncEnumerable<DriverTripPacket> Connect(IAsyncEnumerable<DriverTripPacket> requestPackets, CallContext context = default);
