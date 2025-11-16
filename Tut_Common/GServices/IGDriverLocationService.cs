@@ -1,10 +1,9 @@
-using ProtoBuf.Grpc.Configuration;
 using ProtoBuf.Grpc;
 using Tut.Common.Models;
 
 namespace Tut.Common.GServices;
 
-[Service]
+[ProtoBuf.Grpc.Configuration.Service]
 public interface IGDriverLocationService
 {
     public Task RegisterLocation(IAsyncEnumerable<GLocation> locations, CallContext context = default);
