@@ -159,9 +159,21 @@ public class UserAgent
 
         int extraStops = rng.Next(0, _options.MaxNumberOfStops - 1); // 0,1,2 intermediate stops
         var stops = new List<Place> { pickup };
+
+        GLocation tripBottomLeft = new GLocation
+        {
+            Latitude = Math.Max(_options.AreaBottomLeft.Latitude, pickup.Latitude - 0.02),
+            Longitude = Math.Max(_options.AreaBottomLeft.Longitude, pickup.Longitude - 0.03)
+        };
+        GLocation tripTopRight = new GLocation
+        {
+            Latitude = Math.Min(_options.AreaTopRight.Latitude, pickup.Latitude + 0.02),
+            Longitude = Math.Min(_options.AreaTopRight.Longitude, pickup.Longitude + 0.03)
+        };
+        
         for (int i = 0; i < extraStops; i++)
         {
-            loc = RandomLocationInBounds(_options.AreaBottomLeft, _options.AreaTopRight);
+            loc = RandomLocationInBounds(tripBottomLeft, tripTopRight);
             stops.Add(new Place
             {
                 PlaceType = PlaceType.Stop,
@@ -172,7 +184,7 @@ public class UserAgent
             });
         }
 
-        loc = RandomLocationInBounds(_options.AreaBottomLeft, _options.AreaTopRight);
+        loc = RandomLocationInBounds(tripBottomLeft, tripTopRight);
         var dropoff = new Place
         {
             PlaceType = PlaceType.Stop,

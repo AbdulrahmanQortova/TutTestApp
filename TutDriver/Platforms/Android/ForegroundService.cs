@@ -3,7 +3,6 @@ using Android.Content;
 using Android.OS;
 using AndroidX.Core.App;
 using _Microsoft.Android.Resource.Designer;
-using Plugin.LocalNotification;
 
 namespace TutDriver;
 
@@ -38,14 +37,14 @@ public class ForegroundService : Service
         var pendingIntent = PendingIntent.GetActivity(this, 0, notificationIntent, PendingIntentFlags.Immutable);
                 
         var notification = new NotificationCompat.Builder(this, ServiceChannelId)
-            .SetContentTitle("Pegasus Driver App")
-            .SetContentText(message)
-            .SetSmallIcon(ResourceConstant.Mipmap.appicon)
-            .SetOngoing(true)
-            .SetStyle(new NotificationCompat.BigTextStyle().BigText(message))
-            .SetContentIntent(pendingIntent)
+            .SetContentTitle("Pegasus Driver App")!
+            .SetContentText(message)!
+            .SetSmallIcon(ResourceConstant.Mipmap.appicon)!
+            .SetOngoing(true)!
+            .SetStyle(new NotificationCompat.BigTextStyle().BigText(message))!
+            .SetContentIntent(pendingIntent)!
             .Build();
-        return notification;
+        return notification!;
     }
         
     public override void OnDestroy()

@@ -12,7 +12,7 @@ public class GDriverManagerService(IDriverRepository driverRepository, QipClient
     public async Task<GIdResponse> AddDriver(Driver driver)
     {
         logger.LogInformation("Adding driver: {DriverFullName}", driver.FullName);
-        logger.LogDebug("{Driver}", driver.ToJson());
+        logger.LogDebug("{Driver}", driver);
 
         try
         {
@@ -31,7 +31,7 @@ public class GDriverManagerService(IDriverRepository driverRepository, QipClient
             throw new RpcException(new Status(StatusCode.Internal, $"Error adding driver", ex));
         }
         GIdResponse response = new GIdResponse { Id = driver.Id };
-        logger.LogDebug("Added Driver, Response= {Response}", response.ToJson());
+        logger.LogDebug("Added Driver, Response= {Response}", response);
         return response;
     }
     

@@ -22,7 +22,7 @@
         </Grid>
 
 
-        <ListView Grid.Row="1"
+        <CollectionView Grid.Row="1"
                   Grid.Column="1"
                   x:Name="DriverList"
                   WidthRequest="300"
@@ -31,17 +31,15 @@
                   ZIndex="2"
                   IsVisible="True"
                   ItemsSource="{Binding DriversList}">
-            <ListView.ItemTemplate>
+            <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="pageModels:DriverFilterRow">
-                    <ViewCell>
-                        <HorizontalStackLayout VerticalOptions="Center">
-                            <CheckBox IsChecked="{Binding Selected}" />
-                            <Label Text="{Binding Name}" VerticalOptions="Center" VerticalTextAlignment="Center" />
-                        </HorizontalStackLayout>
-                    </ViewCell>
+                    <HorizontalStackLayout VerticalOptions="Center">
+                        <CheckBox IsChecked="{Binding Selected}" />
+                        <Label Text="{Binding Name}" VerticalOptions="Center" VerticalTextAlignment="Center" />
+                    </HorizontalStackLayout>
                 </DataTemplate>
-            </ListView.ItemTemplate>
-        </ListView>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
         <mapsui:MapControl x:Name="MapControl"
                            Grid.Row="1"
                            Grid.Column="0"

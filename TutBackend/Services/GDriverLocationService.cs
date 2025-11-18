@@ -47,7 +47,7 @@ public class GDriverLocationService(IDriverLocationRepository driverLocationRepo
         }
         catch (Exception ex)
         {
-            logger.LogDebug(ex, "Exception in RegisterLocation:{Driver}", _driver?.ToJson());
+            logger.LogDebug(ex, "Exception in RegisterLocation:{Driver}", _driver);
         }
     }
     

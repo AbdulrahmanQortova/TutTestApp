@@ -4,7 +4,6 @@ using System.Threading.Channels;
 using Tut.Common.Business;
 using Tut.Common.GServices;
 using Tut.Common.Models;
-using Tut.Common.Utils;
 using TutBackend.Repositories;
 namespace TutBackend.Services;
 
@@ -435,7 +434,7 @@ public class GDriverTripService(
 
                 default:
                     // Unknown packet
-                    logger.LogError("Unknown Packet Type:\n{Packet}", packet.ToJson());
+                    logger.LogError("Unknown Packet Type:\n{Packet}", packet);
                     return DriverTripPacket.Error("Unknown packet type");
             }
         }

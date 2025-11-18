@@ -10,6 +10,7 @@ public class MockGeoService : IGeoService
    {
       PropertyNameCaseInsensitive = true,
       PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+      TypeInfoResolver = DirectionResponseJsonSerializationContext.Default,
       Converters = { new JsonStringEnumConverter() }
    };
 
@@ -27,7 +28,7 @@ public class MockGeoService : IGeoService
                 FormattedAddress = "١٠ الوليد بن ثانيان - شيراتون",
                 Geometry = new GeometryDto()
                 {
-                    Location = new GeometryLoccationDto()
+                    Location = new GeometryLocationDto()
                     {
                         Lat = 30.0974,
                         Lng = 31.3736
@@ -40,7 +41,7 @@ public class MockGeoService : IGeoService
                 FormattedAddress = "١٠ الوليد بن ثانيان - شيراتون المطار",
                 Geometry = new GeometryDto()
                 {
-                    Location = new GeometryLoccationDto()
+                    Location = new GeometryLocationDto()
                     {
                        Lat = 30.00585,
                        Lng = 31.22983
@@ -64,7 +65,7 @@ public class MockGeoService : IGeoService
                 FormattedAddress = "١٠ الوليد بن ثانيان - شيراتون",
                 Geometry = new GeometryDto()
                 {
-                    Location = new GeometryLoccationDto()
+                    Location = new GeometryLocationDto()
                     {
                         Lat = 30.0974,
                         Lng = 31.3736
@@ -78,7 +79,12 @@ public class MockGeoService : IGeoService
     
     public Task<DirectionResponseDto?> GetRouteDataAsync(string apiKey, GLocation startLocation, GLocation endLocation)
     {
-       DirectionResponseDto? dto = JsonSerializer.Deserialize<DirectionResponseDto>(DirectionResponse, Options);
+#pragma warning disable IL2026
+       // JsonTypeInfo are stored in the Options object, so this is a false positive.
+       DirectionResponseDto? dto = JsonSerializer.Deserialize<DirectionResponseDto>(
+#pragma warning restore IL2026
+          DirectionResponse, 
+          Options);
        return Task.FromResult(dto);
     }
 

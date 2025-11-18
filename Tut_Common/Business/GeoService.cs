@@ -12,6 +12,7 @@ public class GeoService : IGeoService
     {
         PropertyNameCaseInsensitive = true,
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+        TypeInfoResolver = DirectionResponseJsonSerializationContext.Default,
         Converters = { new JsonStringEnumConverter() }
     };
 
@@ -37,7 +38,10 @@ public class GeoService : IGeoService
             var response = await HttpClientInstance.GetAsync(url);
             if (!response.IsSuccessStatusCode) return null;
             var json = await response.Content.ReadAsStringAsync();
+#pragma warning disable IL2026
+            // JsonTypeInfo are stored in the Options object, so this is a false positive.
             return JsonSerializer.Deserialize<DirectionResponseDto>(json, JsonSerializerOptions);
+#pragma warning restore IL2026
         }
         catch (HttpRequestException ex)
         {
@@ -65,7 +69,10 @@ public class GeoService : IGeoService
             if (!response.IsSuccessStatusCode)
                 return CreateErrorResult($"Unable to retrieve location data (API Status: {response.StatusCode}).");
             string json = await response.Content.ReadAsStringAsync();
+#pragma warning disable IL2026
+            // JsonTypeInfo are stored in the Options object, so this is a false positive.
             SearchLocationResultDto? placesResponse = JsonSerializer.Deserialize<SearchLocationResultDto>(json, JsonSerializerOptions);
+#pragma warning restore IL2026
             return placesResponse ?? CreateErrorResult("Failed to deserialize location search response.");
         }
         catch (HttpRequestException ex)
@@ -91,7 +98,10 @@ public class GeoService : IGeoService
             if (!response.IsSuccessStatusCode)
                 return CreateErrorResult($"Unable to retrieve location data from coordinates (API Status: {response.StatusCode}).");
             string json = await response.Content.ReadAsStringAsync();
+#pragma warning disable IL2026
+            // JsonTypeInfo are stored in the Options object, so this is a false positive.
             SearchLocationResultDto? placesResponse = JsonSerializer.Deserialize<SearchLocationResultDto>(json, JsonSerializerOptions);
+#pragma warning restore IL2026
             return placesResponse ?? CreateErrorResult("Failed to deserialize coordinate search response.");
         }
         catch (HttpRequestException ex)

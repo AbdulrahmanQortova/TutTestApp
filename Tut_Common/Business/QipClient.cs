@@ -21,32 +21,32 @@ namespace Tut.Common.Business;
 
         public async Task<HttpResponseMessage> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
         {
-            if (request is null) throw new ArgumentNullException(nameof(request));
-            return await _http.PostAsJsonAsync("/register", request, cancellationToken);
+            ArgumentNullException.ThrowIfNull(request);
+            return await _http.PostAsJsonAsync("/register", request, AuthDtoJsonSerializationContext.Default.RegisterRequest, cancellationToken);
         }
 
         public async Task<TokenResponse> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
         {
             if (request is null) throw new ArgumentNullException(nameof(request));
-            var resp = await _http.PostAsJsonAsync("/login", request, cancellationToken);
+            var resp = await _http.PostAsJsonAsync("/login", request, AuthDtoJsonSerializationContext.Default.LoginRequest, cancellationToken);
             resp.EnsureSuccessStatusCode();
-            var token = await resp.Content.ReadFromJsonAsync<TokenResponse>(cancellationToken: cancellationToken);
+            var token = await resp.Content.ReadFromJsonAsync<TokenResponse>(AuthDtoJsonSerializationContext.Default.TokenResponse, cancellationToken);
             return token!;
         }
 
         public async Task<TokenResponse> RefreshAsync(RefreshRequest request, CancellationToken cancellationToken = default)
         {
             if (request is null) throw new ArgumentNullException(nameof(request));
-            var resp = await _http.PostAsJsonAsync("/refresh", request, cancellationToken);
+            var resp = await _http.PostAsJsonAsync("/refresh", request, AuthDtoJsonSerializationContext.Default.RefreshRequest, cancellationToken);
             resp.EnsureSuccessStatusCode();
-            var token = await resp.Content.ReadFromJsonAsync<TokenResponse>(cancellationToken: cancellationToken);
+            var token = await resp.Content.ReadFromJsonAsync<TokenResponse>(AuthDtoJsonSerializationContext.Default.TokenResponse, cancellationToken);
             return token!;
         }
 
         public async Task<HttpResponseMessage> LogoutAsync(RefreshRequest request, CancellationToken cancellationToken = default)
         {
             if (request is null) throw new ArgumentNullException(nameof(request));
-            return await _http.PostAsJsonAsync("/logout", request, cancellationToken);
+            return await _http.PostAsJsonAsync("/logout", request, AuthDtoJsonSerializationContext.Default.RefreshRequest, cancellationToken);
         }
 
         public Task<ValidateResponse> ValidateAsync(ValidateRequest request, CancellationToken cancellationToken = default)
@@ -58,7 +58,6 @@ namespace Tut.Common.Business;
             {
                 return Task.FromResult(new ValidateResponse { IsValid = false });
             }
-
             string username = request.Token[7..];
             return Task.FromResult(new ValidateResponse { IsValid = true, Username = username });
         }

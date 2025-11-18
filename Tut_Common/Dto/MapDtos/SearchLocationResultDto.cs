@@ -16,10 +16,10 @@
 
     public class GeometryDto
     {
-        public GeometryLoccationDto? Location { get; set; }
+        public GeometryLocationDto? Location { get; set; }
     }
 
-    public class GeometryLoccationDto
+    public class GeometryLocationDto
     {
         public double? Lat { get; set; }
         public double? Lng { get; set; }

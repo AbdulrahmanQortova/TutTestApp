@@ -10,7 +10,7 @@ public class TripDistributor(
     ) 
     : BackgroundService
 {
-
+    private readonly TimeSpan _delayBetweenIterations = TimeSpan.FromSeconds(5);
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         await DistributionLoop(stoppingToken);
@@ -32,7 +32,7 @@ public class TripDistributor(
                 if (trip is null)
                 {
                     // Nothing to do right now - wait and retry
-                    await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+                    await Task.Delay(_delayBetweenIterations, cancellationToken);
                     continue;
                 }
 
@@ -44,7 +44,7 @@ public class TripDistributor(
                 {
                     logger.LogInformation("No suitable driver found for trip {TripId}", trip.Id);
                     // Wait a bit before retrying so we don't tight-loop on the same trip
-                    await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+                    await Task.Delay(_delayBetweenIterations, cancellationToken);
                     continue;
                 }
                 bestDriver = await driverRepository.GetByIdAsync(bestDriver.Id);
@@ -55,6 +55,7 @@ public class TripDistributor(
                 await driverRepository.UpdateAsync(bestDriver);
                 await tripRepository.UpdateAsync(trip);
                 logger.LogInformation("Assigned driver {DriverId} to trip {TripId}", bestDriver.Id, trip.Id);
+                await Task.Delay(_delayBetweenIterations, cancellationToken);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {

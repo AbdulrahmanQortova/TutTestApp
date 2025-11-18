@@ -52,14 +52,14 @@ public partial class HomePageModel(
             notificationEnabled = await notificationService.AreNotificationsEnabled();
         }
         if (!notificationEnabled)
-            await Shell.Current.DisplayAlert("Permission Error", "Notification Permission MUST be allowed for Tut Driver App to run.", "Ok");
+            await Shell.Current.DisplayAlertAsync("Permission Error", "Notification Permission MUST be allowed for Tut Driver App to run.", "Ok");
 
         if (DeviceInfo.Platform == DevicePlatform.iOS)
         {
             PermissionStatus status = await locationService.RequestLocationAlwaysPermissions();
             if (status != PermissionStatus.Granted)
             {
-                await Shell.Current.DisplayAlert("Permission Error", "Location Permission MUST be allowed for Tut Driver App to run.", "Ok");
+                await Shell.Current.DisplayAlertAsync("Permission Error", "Location Permission MUST be allowed for Tut Driver App to run.", "Ok");
             }
         }
         if (DeviceInfo.Platform == DevicePlatform.Android)
@@ -67,7 +67,7 @@ public partial class HomePageModel(
             PermissionStatus status = await locationService.RequestLocationPermissions();
             if (status != PermissionStatus.Granted)
             {
-                await Shell.Current.DisplayAlert("Permission Error", "Location Permission MUST be allowed for Tut Driver App to run.", "Ok");
+                await Shell.Current.DisplayAlertAsync("Permission Error", "Location Permission MUST be allowed for Tut Driver App to run.", "Ok");
             }
         }
         
@@ -95,11 +95,11 @@ public partial class HomePageModel(
         await locationService.StartLocationUpdates();
         
         driverLocationManagerService.SetAccessToken("DA10");
-        driverLocationManagerService.ErrorReceived += (_, e) => Shell.Current.DisplayAlert("Error", "LocationManager Error: " + e.ErrorText, "Ok");
+        driverLocationManagerService.ErrorReceived += (_, e) => Shell.Current.DisplayAlertAsync("Error", "LocationManager Error: " + e.ErrorText, "Ok");
         await driverLocationManagerService.Connect(CancellationToken.None);
         
         driverTripManager.SetAccessToken("DA10");
-        driverTripManager.ErrorReceived += (_, e) => Shell.Current.DisplayAlert("Error", "DriverTripManager Error: " + e.ErrorText, "Ok");
+        driverTripManager.ErrorReceived += (_, e) => Shell.Current.DisplayAlertAsync("Error", "DriverTripManager Error: " + e.ErrorText, "Ok");
         await driverTripManager.Connect(CancellationToken.None);
 
         Shell.Current.CurrentPage.GetParentWindow().Stopped += (_, _) =>
@@ -144,7 +144,7 @@ public partial class HomePageModel(
         );
     }
 
-    private async void HandleTripManagerStatusChanged(object? s, StatusUpdateEventArgs e)
+    private void HandleTripManagerStatusChanged(object? s, StatusUpdateEventArgs e)
     {
         if (driverTripManager.CurrentTrip is null) return;
         if(driverTripManager.CurrentTrip.Status != TripState.Requested && driverTripManager.CurrentTrip.Status != TripState.Acknowledged && driverTripManager.CurrentTrip.Status != TripState.Ended)

@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 namespace Tut.Common.Dto.MapDtos;
 
 public class DirectionResponseDto
@@ -83,3 +84,20 @@ public enum TravelMode
     Bicycling,
     Transit
 }
+
+[JsonSerializable(typeof(DirectionResponseDto))]
+[JsonSerializable(typeof(GeocodedWaypointDto))]
+[JsonSerializable(typeof(RouteDto))]
+[JsonSerializable(typeof(BoundsDto))]
+[JsonSerializable(typeof(LocationDto))]
+[JsonSerializable(typeof(LegDto))]
+[JsonSerializable(typeof(TextValueDto))]
+[JsonSerializable(typeof(TimeZonedTextValueDto))]
+[JsonSerializable(typeof(DirectionsViaWaypointDto))]
+[JsonSerializable(typeof(StepDto))]
+[JsonSerializable(typeof(DirectionPolylineDto))]
+[JsonSerializable(typeof(SearchLocationResultDto))]
+[JsonSerializable(typeof(SearchLocationItemDto))]
+[JsonSerializable(typeof(GeometryDto))]
+[JsonSerializable(typeof(GeometryLocationDto))]
+public partial class DirectionResponseJsonSerializationContext : JsonSerializerContext;

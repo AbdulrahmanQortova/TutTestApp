@@ -3,9 +3,7 @@ using ProtoBuf.Grpc;
 using System.Threading.Channels;
 using Tut.Common.Business;
 using Tut.Common.GServices;
-using Tut.Common.Managers;
 using Tut.Common.Models;
-using Tut.Common.Utils;
 using TutBackend.Repositories;
 namespace TutBackend.Services;
 
@@ -237,7 +235,7 @@ public class GUserTripService(
                     return await HandleInquireTripAsync(packet.Trip);
                 default:
                     // Unknown packet
-                    logger.LogError("Unknown Packet Type: {Packet}", packet.ToJson());
+                    logger.LogError("Unknown Packet Type: {Packet}", packet);
                     return UserTripPacket.Error("Unknown packet type");
             }
         }

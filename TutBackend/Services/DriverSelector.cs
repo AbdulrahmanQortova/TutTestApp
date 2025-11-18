@@ -26,7 +26,7 @@ public class DriverSelector
         costFunction ??= LocationUtils.DistanceInMeters;
         if (trip.Stops.Count == 0)
         {
-            logger?.LogError("Found a Trip without a Pickup:\n {Trip}", trip.ToJson());
+            logger.LogError("Found a Trip without a Pickup:\n {Trip}", trip);
             return -1;
         }
         
@@ -104,7 +104,7 @@ public class DriverSelector
         costFunction ??= LocationUtils.DistanceInMeters;
         if (trip.Stops.Count == 0)
         {
-            logger?.LogError("Found a Trip without a Pickup:\n {Trip}", trip.ToJson());
+            logger?.LogError("Found a Trip without a Pickup:\n {Trip}", trip);
             return -1;
         }
         

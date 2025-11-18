@@ -50,14 +50,14 @@ public partial class TripPageModel(
         catch (Exception)
         {
             // No map application available to open or placemark can not be located
-            await Shell.Current.DisplayAlert("Error", "Unable to open Map Application", "Ok");
+            await Shell.Current.DisplayAlertAsync("Error", "Unable to open Map Application", "Ok");
         }
 
     }
     [RelayCommand]
     private async Task OpenClientChatAsync()
     {
-        await Shell.Current.DisplayAlert("Sorry", "Client Chat is not implemented yet", "Ok");
+        await Shell.Current.DisplayAlertAsync("Sorry", "Client Chat is not implemented yet", "Ok");
     }
 
     [RelayCommand]
@@ -92,7 +92,7 @@ public partial class TripPageModel(
             case TripState.Canceled:
                 break;
             default:
-                throw new ArgumentOutOfRangeException();
+                throw new ArgumentOutOfRangeException("Unknown trip status", new Exception("Dummy Inner Exception"));
         }
     }
 
@@ -152,7 +152,7 @@ public partial class TripPageModel(
             case TripState.Canceled:
                 break;
             default:
-                throw new ArgumentOutOfRangeException();
+                throw new ArgumentOutOfRangeException("Unknown trip status", new Exception("Dummy Inner Exception"));
         }
         List<QMapModel.MapRoute> routes = [];
         List<QMapModel.MapPoint> endPoints = [];
@@ -211,7 +211,7 @@ public partial class TripPageModel(
 
     private void OnTripManagerErrorReceived(object? sender, ErrorReceivedEventArgs e)
     {
-        Shell.Current.DisplayAlert("Error", "TripManager Error: " + e.ErrorText, "Ok");
+        Shell.Current.DisplayAlertAsync("Error", "TripManager Error: " + e.ErrorText, "Ok");
     }
     
     private static List<QMapModel.MapLine> GetSimpleRouteForTrip(Trip trip, Color? color = null, int thickness = 1)
