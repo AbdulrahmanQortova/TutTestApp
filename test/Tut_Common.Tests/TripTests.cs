@@ -241,7 +241,7 @@ namespace Tut.Common.Tests
         {
             var tripList = new TripList();
 
-            Assert.Null(tripList.Trips);
+            Assert.Empty(tripList.Trips);
         }
 
         [Fact]

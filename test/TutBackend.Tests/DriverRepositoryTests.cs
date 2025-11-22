@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using TutBackend.Data;
 using TutBackend.Repositories;
 using Tut.Common.Models;
+using TutBackend.Services;
 
 namespace TutBackend.Tests;
 
@@ -20,6 +21,7 @@ public class DriverRepositoryTests
     public async Task GetByMobileAsync_WithExistingDriver_ReturnsDriver()
     {
         // Arrange
+        DriverCache.Clear();
         await using var context = CreateInMemoryContext();
         var repository = new DriverRepository(context);
         var driver = new Driver { Mobile = "1234567890", FirstName = "John", LastName = "Driver" };
@@ -38,6 +40,7 @@ public class DriverRepositoryTests
     public async Task GetByMobileAsync_WithNonExistingDriver_ReturnsNull()
     {
         // Arrange
+        DriverCache.Clear();
         await using var context = CreateInMemoryContext();
         var repository = new DriverRepository(context);
 
@@ -52,6 +55,7 @@ public class DriverRepositoryTests
     public async Task GetByIdsAsync_WithValidIds_ReturnsDrivers()
     {
         // Arrange
+        DriverCache.Clear();
         await using var context = CreateInMemoryContext();
         var repository = new DriverRepository(context);
         var driver1 = await repository.AddAsync(new Driver { Mobile = "1111111111", FirstName = "Driver1", LastName = "Test" });
@@ -71,6 +75,7 @@ public class DriverRepositoryTests
     public async Task GetByIdsAsync_WithEmptyList_ReturnsEmpty()
     {
         // Arrange
+        DriverCache.Clear();
         await using var context = CreateInMemoryContext();
         var repository = new DriverRepository(context);
 
@@ -85,6 +90,7 @@ public class DriverRepositoryTests
     public async Task GetByIdsAsync_WithInvalidIds_ReturnsEmpty()
     {
         // Arrange
+        DriverCache.Clear();
         await using var context = CreateInMemoryContext();
         var repository = new DriverRepository(context);
 
@@ -99,6 +105,7 @@ public class DriverRepositoryTests
     public async Task GetByIdsAsync_WithDuplicateIds_ReturnsDistinct()
     {
         // Arrange
+        DriverCache.Clear();
         await using var context = CreateInMemoryContext();
         var repository = new DriverRepository(context);
         var driver = await repository.AddAsync(new Driver { Mobile = "1111111111", FirstName = "Driver1", LastName = "Test" });
@@ -114,6 +121,7 @@ public class DriverRepositoryTests
     public async Task GetAllDriversAsync_ReturnsDriversWithStats()
     {
         // Arrange
+        DriverCache.Clear();
         await using var context = CreateInMemoryContext();
         var repository = new DriverRepository(context);
         var driver = await repository.AddAsync(new Driver { Mobile = "1111111111", FirstName = "Driver1", LastName = "Test" });
@@ -131,6 +139,7 @@ public class DriverRepositoryTests
     public async Task GetByIdDetailedAsync_WithExistingDriver_ReturnsDriverWithRelations()
     {
         // Arrange
+        DriverCache.Clear();
         await using var context = CreateInMemoryContext();
         var repository = new DriverRepository(context);
         var driver = await repository.AddAsync(new Driver { Mobile = "1111111111", FirstName = "Driver1", LastName = "Test" });
@@ -148,6 +157,7 @@ public class DriverRepositoryTests
     public async Task GetByIdDetailedAsync_WithNonExistingDriver_ReturnsNull()
     {
         // Arrange
+        DriverCache.Clear();
         await using var context = CreateInMemoryContext();
         var repository = new DriverRepository(context);
 
@@ -162,6 +172,7 @@ public class DriverRepositoryTests
     public async Task AddAsync_AddsDriverToDatabase()
     {
         // Arrange
+        DriverCache.Clear();
         await using var context = CreateInMemoryContext();
         var repository = new DriverRepository(context);
         var driver = new Driver { Mobile = "5555555555", FirstName = "Jane", LastName = "Driver", State = DriverState.Available };
@@ -179,6 +190,7 @@ public class DriverRepositoryTests
     public async Task UpdateAsync_UpdatesDriverState()
     {
         // Arrange
+        DriverCache.Clear();
         await using var context = CreateInMemoryContext();
         var repository = new DriverRepository(context);
         var driver = new Driver { Mobile = "1111111111", FirstName = "Test", LastName = "Driver", State = DriverState.Available };
@@ -194,4 +206,3 @@ public class DriverRepositoryTests
         Assert.Equal(DriverState.OnTrip, updated.State);
     }
 }
-

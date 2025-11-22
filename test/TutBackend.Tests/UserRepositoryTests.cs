@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using TutBackend.Data;
 using TutBackend.Repositories;
 using Tut.Common.Models;
+using TutBackend.Services;
 
 namespace TutBackend.Tests;
 
@@ -20,6 +21,7 @@ public class UserRepositoryTests
     public async Task GetByMobileAsync_WithExistingUser_ReturnsUser()
     {
         // Arrange
+        DriverCache.Clear();
         await using var context = CreateInMemoryContext();
         var repository = new UserRepository(context);
         var user = new User { Mobile = "1234567890", FirstName = "John", LastName = "Doe" };
@@ -38,6 +40,7 @@ public class UserRepositoryTests
     public async Task GetByMobileAsync_WithNonExistingUser_ReturnsNull()
     {
         // Arrange
+        DriverCache.Clear();
         await using var context = CreateInMemoryContext();
         var repository = new UserRepository(context);
 
@@ -52,6 +55,7 @@ public class UserRepositoryTests
     public async Task AddAsync_AddsUserToDatabase()
     {
         // Arrange
+        DriverCache.Clear();
         await using var context = CreateInMemoryContext();
         var repository = new UserRepository(context);
         var user = new User { Mobile = "5555555555", FirstName = "Jane", LastName = "Smith" };
@@ -71,6 +75,7 @@ public class UserRepositoryTests
     public async Task UpdateAsync_UpdatesUserInDatabase()
     {
         // Arrange
+        DriverCache.Clear();
         await using var context = CreateInMemoryContext();
         var repository = new UserRepository(context);
         var user = new User { Mobile = "1111111111", FirstName = "Old", LastName = "Name" };
@@ -90,6 +95,7 @@ public class UserRepositoryTests
     public async Task DeleteAsync_RemovesUserFromDatabase()
     {
         // Arrange
+        DriverCache.Clear();
         await using var context = CreateInMemoryContext();
         var repository = new UserRepository(context);
         var user = new User { Mobile = "2222222222", FirstName = "Delete", LastName = "Me" };
@@ -108,6 +114,7 @@ public class UserRepositoryTests
     public async Task GetAllAsync_ReturnsAllUsers()
     {
         // Arrange
+        DriverCache.Clear();
         await using var context = CreateInMemoryContext();
         var repository = new UserRepository(context);
         await repository.AddAsync(new User { Mobile = "1111111111", FirstName = "User1", LastName = "Test" });

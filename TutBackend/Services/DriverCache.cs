@@ -28,4 +28,10 @@ public static class DriverCache
     {
         return DriverLocations.Values.ToList();
     }
+    
+    public static void Clear()
+    {
+        DriverStates.Clear();
+        DriverLocations.Clear();
+    }
 }

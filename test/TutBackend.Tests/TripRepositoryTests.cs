@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using TutBackend.Data;
 using TutBackend.Repositories;
 using Tut.Common.Models;
+using TutBackend.Services;
 
 namespace TutBackend.Tests;
 
@@ -19,6 +20,7 @@ public class TripRepositoryTests
     public async Task GetOneUnassignedTripAsync_WithUnassignedTrips_ReturnsOldestTrip()
     {
         // Arrange
+        DriverCache.Clear();
         await using var context = CreateInMemoryContext();
         var repository = new TripRepository(context);
         var user = new User { Mobile = "1234567890", FirstName = "Test", LastName = "User" };
@@ -39,12 +41,11 @@ public class TripRepositoryTests
         Assert.Equal(trip2.Id, result.Id);
     }
 
-    // ...existing code...
-
     [Fact]
     public async Task GetOneUnassignedTripAsync_WithAssignedTrips_ReturnsNull()
     {
         // Arrange
+        DriverCache.Clear();
         await using var context = CreateInMemoryContext();
         var repository = new TripRepository(context);
         var user = new User { Mobile = "1234567890", FirstName = "Test", LastName = "User" };
@@ -68,6 +69,7 @@ public class TripRepositoryTests
     public async Task GetActiveTripForUser_WithActiveTrip_ReturnsTrip()
     {
         // Arrange
+        DriverCache.Clear();
         await using var context = CreateInMemoryContext();
         var repository = new TripRepository(context);
         var user = new User { Mobile = "1234567890", FirstName = "Test", LastName = "User" };
@@ -90,6 +92,7 @@ public class TripRepositoryTests
     public async Task GetActiveTripForUser_WithEndedTrip_ReturnsNull()
     {
         // Arrange
+        DriverCache.Clear();
         await using var context = CreateInMemoryContext();
         var repository = new TripRepository(context);
         var user = new User { Mobile = "1234567890", FirstName = "Test", LastName = "User" };
@@ -111,6 +114,7 @@ public class TripRepositoryTests
     public async Task GetActiveTripForDriver_WithActiveTrip_ReturnsTrip()
     {
         // Arrange
+        DriverCache.Clear();
         await using var context = CreateInMemoryContext();
         var repository = new TripRepository(context);
         var driver = new Driver { Mobile = "0987654321", FirstName = "Test", LastName = "Driver" };
@@ -135,6 +139,7 @@ public class TripRepositoryTests
     public async Task GetTripsForUser_ReturnsUserTrips()
     {
         // Arrange
+        DriverCache.Clear();
         await using var context = CreateInMemoryContext();
         var repository = new TripRepository(context);
         var user1 = new User { Mobile = "1111111111", FirstName = "User1", LastName = "Test" };
@@ -159,6 +164,7 @@ public class TripRepositoryTests
     public async Task GetTripsForDriver_ReturnsDriverTrips()
     {
         // Arrange
+        DriverCache.Clear();
         await using var context = CreateInMemoryContext();
         var repository = new TripRepository(context);
         var driver1 = new Driver { Mobile = "1111111111", FirstName = "Driver1", LastName = "Test" };
@@ -185,6 +191,7 @@ public class TripRepositoryTests
     public async Task GetActiveTripsAsync_ReturnsOnlyActiveTrips()
     {
         // Arrange
+        DriverCache.Clear();
         await using var context = CreateInMemoryContext();
         var repository = new TripRepository(context);
         var user = new User { Mobile = "1234567890", FirstName = "Test", LastName = "User" };
@@ -208,6 +215,7 @@ public class TripRepositoryTests
     public async Task GetAllTripsAsync_WithPagination_ReturnsCorrectPage()
     {
         // Arrange
+        DriverCache.Clear();
         await using var context = CreateInMemoryContext();
         var repository = new TripRepository(context);
         var user = new User { Mobile = "1234567890", FirstName = "Test", LastName = "User" };

@@ -34,6 +34,7 @@ public class DriverSelectorTests
     public async Task FindBestDriverIdAsync_WithNoLocations_ReturnsMinusOne()
     {
         // Arrange
+        DriverCache.Clear();
         await using var context = CreateInMemoryContext();
         var serviceProvider = CreateServiceProvider(context);
         var logger = Substitute.For<ILogger<DriverSelector>>();
@@ -58,6 +59,7 @@ public class DriverSelectorTests
     public async Task FindBestDriverIdAsync_WithNoStops_ReturnsMinusOne()
     {
         // Arrange
+        DriverCache.Clear();
         await using var context = CreateInMemoryContext();
         var serviceProvider = CreateServiceProvider(context);
         var logger = Substitute.For<ILogger<DriverSelector>>();
@@ -76,6 +78,7 @@ public class DriverSelectorTests
     public async Task FindBestDriverIdAsync_SelectsClosestAvailableDriver()
     {
         // Arrange
+        DriverCache.Clear();
         await using var context = CreateInMemoryContext();
         var driverRepo = new DriverRepository(context);
         var locationRepo = new DriverLocationRepository(context);
@@ -87,7 +90,7 @@ public class DriverSelectorTests
             LastName = "Test",
             State = DriverState.Available
         });
-
+        await driverRepo.SetDriverStateAsync(driver1.Id, DriverState.Available);
         var driver2 = await driverRepo.AddAsync(new Driver
         {
             Mobile = "2222222222",
@@ -95,9 +98,10 @@ public class DriverSelectorTests
             LastName = "Test",
             State = DriverState.Available
         });
+        await driverRepo.SetDriverStateAsync(driver2.Id, DriverState.Available);
 
         // Driver1 is closer (30.01, 31.01) to pickup (30.0, 31.0)
-        await locationRepo.AddAsync(new DriverLocation
+        await locationRepo.SaveDriverLocationAsync(new DriverLocation
         {
             DriverId = driver1.Id,
             DriverName = driver1.FullName,
@@ -108,7 +112,7 @@ public class DriverSelectorTests
         });
 
         // Driver2 is farther (30.1, 31.1)
-        await locationRepo.AddAsync(new DriverLocation
+        await locationRepo.SaveDriverLocationAsync(new DriverLocation
         {
             DriverId = driver2.Id,
             DriverName = driver2.FullName,
@@ -141,6 +145,7 @@ public class DriverSelectorTests
     public async Task FindBestDriverIdAsync_ExcludesDriversInExcludedSet()
     {
         // Arrange
+        DriverCache.Clear();
         await using var context = CreateInMemoryContext();
         var driverRepo = new DriverRepository(context);
         var locationRepo = new DriverLocationRepository(context);
@@ -152,6 +157,7 @@ public class DriverSelectorTests
             LastName = "Test",
             State = DriverState.Available
         });
+        await driverRepo.SetDriverStateAsync(driver1.Id, DriverState.Available);
 
         var driver2 = await driverRepo.AddAsync(new Driver
         {
@@ -160,8 +166,9 @@ public class DriverSelectorTests
             LastName = "Test",
             State = DriverState.Available
         });
+        await driverRepo.SetDriverStateAsync(driver2.Id, DriverState.Available);
 
-        await locationRepo.AddAsync(new DriverLocation
+        await locationRepo.SaveDriverLocationAsync(new DriverLocation
         {
             DriverId = driver1.Id,
             DriverName = driver1.FullName,
@@ -171,7 +178,7 @@ public class DriverSelectorTests
             Timestamp = DateTime.UtcNow
         });
 
-        await locationRepo.AddAsync(new DriverLocation
+        await locationRepo.SaveDriverLocationAsync(new DriverLocation
         {
             DriverId = driver2.Id,
             DriverName = driver2.FullName,
@@ -204,6 +211,7 @@ public class DriverSelectorTests
     public async Task FindBestDriverIdAsync_IgnoresNonAvailableDrivers()
     {
         // Arrange
+        DriverCache.Clear();
         await using var context = CreateInMemoryContext();
         var driverRepo = new DriverRepository(context);
         var locationRepo = new DriverLocationRepository(context);
@@ -215,6 +223,7 @@ public class DriverSelectorTests
             LastName = "Test",
             State = DriverState.OnTrip
         });
+        await driverRepo.SetDriverStateAsync(driver1.Id, DriverState.OnTrip);
 
         var driver2 = await driverRepo.AddAsync(new Driver
         {
@@ -223,9 +232,10 @@ public class DriverSelectorTests
             LastName = "Test",
             State = DriverState.Available
         });
-
+        await driverRepo.SetDriverStateAsync(driver2.Id, DriverState.Available);
+        
         // Driver1 is closer but not available
-        await locationRepo.AddAsync(new DriverLocation
+        await locationRepo.SaveDriverLocationAsync(new DriverLocation
         {
             DriverId = driver1.Id,
             DriverName = driver1.FullName,
@@ -236,7 +246,7 @@ public class DriverSelectorTests
         });
 
         // Driver2 is farther but available
-        await locationRepo.AddAsync(new DriverLocation
+        await locationRepo.SaveDriverLocationAsync(new DriverLocation
         {
             DriverId = driver2.Id,
             DriverName = driver2.FullName,
@@ -269,6 +279,7 @@ public class DriverSelectorTests
     public async Task FindBestDriverAsync_ReturnsDriverEntity()
     {
         // Arrange
+        DriverCache.Clear();
         await using var context = CreateInMemoryContext();
         var driverRepo = new DriverRepository(context);
         var locationRepo = new DriverLocationRepository(context);
@@ -280,8 +291,9 @@ public class DriverSelectorTests
             LastName = "Last",
             State = DriverState.Available
         });
+        await driverRepo.SetDriverStateAsync(driver.Id, DriverState.Available);
 
-        await locationRepo.AddAsync(new DriverLocation
+        await locationRepo.SaveDriverLocationAsync(new DriverLocation
         {
             DriverId = driver.Id,
             DriverName = driver.FullName,
@@ -316,6 +328,7 @@ public class DriverSelectorTests
     public async Task FindBestDriverAsync_WithNoMatch_ReturnsNull()
     {
         // Arrange
+        DriverCache.Clear();
         await using var context = CreateInMemoryContext();
         var serviceProvider = CreateServiceProvider(context);
         var logger = Substitute.For<ILogger<DriverSelector>>();
@@ -340,6 +353,7 @@ public class DriverSelectorTests
     public async Task FindBestDriverIdAsync_WithCustomCostFunction_UsesIt()
     {
         // Arrange
+        DriverCache.Clear();
         await using var context = CreateInMemoryContext();
         var driverRepo = new DriverRepository(context);
         var locationRepo = new DriverLocationRepository(context);
@@ -351,8 +365,9 @@ public class DriverSelectorTests
             LastName = "Test",
             State = DriverState.Available
         });
+        await driverRepo.SetDriverStateAsync(driver1.Id, DriverState.Available);
 
-        await locationRepo.AddAsync(new DriverLocation
+        await locationRepo.SaveDriverLocationAsync(new DriverLocation
         {
             DriverId = driver1.Id,
             DriverName = driver1.FullName,

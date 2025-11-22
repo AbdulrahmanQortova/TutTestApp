@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using TutBackend.Data;
 using TutBackend.Repositories;
 using Tut.Common.Models;
+using TutBackend.Services;
 
 namespace TutBackend.Tests;
 
@@ -20,6 +21,7 @@ public class DriverLocationRepositoryTests
     public async Task GetLatestDriverLocations_ReturnsLatestLocationPerDriver()
     {
         // Arrange
+        DriverCache.Clear();
         await using var context = CreateInMemoryContext();
         var repository = new DriverLocationRepository(context);
 
@@ -53,9 +55,9 @@ public class DriverLocationRepositoryTests
             Timestamp = DateTime.UtcNow.AddMinutes(-5)
         };
 
-        await repository.AddAsync(oldLocation1);
-        await repository.AddAsync(newLocation1);
-        await repository.AddAsync(location2);
+        await repository.SaveDriverLocationAsync(oldLocation1);
+        await repository.SaveDriverLocationAsync(newLocation1);
+        await repository.SaveDriverLocationAsync(location2);
 
         // Act
         var result = await repository.GetLatestDriverLocations();
@@ -72,6 +74,7 @@ public class DriverLocationRepositoryTests
     public async Task GetLatestDriverLocations_WithNoLocations_ReturnsEmpty()
     {
         // Arrange
+        DriverCache.Clear();
         await using var context = CreateInMemoryContext();
         var repository = new DriverLocationRepository(context);
 
@@ -86,6 +89,7 @@ public class DriverLocationRepositoryTests
     public async Task GetLocationHistoryForDriver_ReturnsLocationsForSpecificDriver()
     {
         // Arrange
+        DriverCache.Clear();
         await using var context = CreateInMemoryContext();
         var repository = new DriverLocationRepository(context);
         var since = DateTime.UtcNow.AddHours(-1);
@@ -136,6 +140,7 @@ public class DriverLocationRepositoryTests
     public async Task GetLocationHistoryForDriver_WithOldDate_ReturnsEmpty()
     {
         // Arrange
+        DriverCache.Clear();
         await using var context = CreateInMemoryContext();
         var repository = new DriverLocationRepository(context);
         var since = DateTime.UtcNow.AddHours(-2);
@@ -163,6 +168,7 @@ public class DriverLocationRepositoryTests
     public async Task GetLocationHistoryForDriver_OrdersByTimestampDescending()
     {
         // Arrange
+        DriverCache.Clear();
         await using var context = CreateInMemoryContext();
         var repository = new DriverLocationRepository(context);
         var since = DateTime.UtcNow.AddHours(-1);
@@ -198,4 +204,3 @@ public class DriverLocationRepositoryTests
         Assert.True(result[0].Timestamp >= result[1].Timestamp);
     }
 }
-

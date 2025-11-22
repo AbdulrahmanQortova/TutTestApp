@@ -12,6 +12,7 @@ public class QipClientTests
     [Fact]
     public void Create_WithValidBaseAddress_ReturnsClient()
     {
+        DriverCache.Clear();
         // Arrange & Act
         var client = QipClient.Create("https://example.com");
 
@@ -25,6 +26,7 @@ public class QipClientTests
     [InlineData("   ")]
     public void Create_WithInvalidBaseAddress_ThrowsArgumentException(string? baseAddress)
     {
+        DriverCache.Clear();
         // Act & Assert
         Assert.Throws<ArgumentException>(() => QipClient.Create(baseAddress!));
     }
@@ -32,6 +34,7 @@ public class QipClientTests
     [Fact]
     public async Task RegisterAsync_WithNullRequest_ThrowsArgumentNullException()
     {
+        DriverCache.Clear();
         // Arrange
         var client = QipClient.Create("https://example.com");
 
@@ -43,6 +46,7 @@ public class QipClientTests
     [Fact]
     public async Task LoginAsync_WithNullRequest_ThrowsArgumentNullException()
     {
+        DriverCache.Clear();
         // Arrange
         var client = QipClient.Create("https://example.com");
 
@@ -54,6 +58,7 @@ public class QipClientTests
     [Fact]
     public async Task RefreshAsync_WithNullRequest_ThrowsArgumentNullException()
     {
+        DriverCache.Clear();
         // Arrange
         var client = QipClient.Create("https://example.com");
 
@@ -65,6 +70,7 @@ public class QipClientTests
     [Fact]
     public async Task LogoutAsync_WithNullRequest_ThrowsArgumentNullException()
     {
+        DriverCache.Clear();
         // Arrange
         var client = QipClient.Create("https://example.com");
 
@@ -76,6 +82,7 @@ public class QipClientTests
     [Fact]
     public async Task ValidateAsync_WithNullRequest_ThrowsArgumentNullException()
     {
+        DriverCache.Clear();
         // Arrange
         var client = QipClient.Create("https://example.com");
 
@@ -87,6 +94,7 @@ public class QipClientTests
     [Fact]
     public async Task ValidateAsync_WithEmptyToken_ReturnsFalse()
     {
+        DriverCache.Clear();
         // Arrange
         var client = QipClient.Create("https://example.com");
         var request = new ValidateRequest { Token = "" };
@@ -101,6 +109,7 @@ public class QipClientTests
     [Fact]
     public async Task ValidateAsync_WithValidToken_ReturnsValidResponse()
     {
+        DriverCache.Clear();
         // Arrange
         var client = QipClient.Create("https://example.com");
         var request = new ValidateRequest { Token = "Bearer:testuser" };
@@ -116,6 +125,7 @@ public class QipClientTests
     [Fact]
     public async Task ValidateAsync_WithShortToken_ExtractsUsername()
     {
+        DriverCache.Clear();
         // Arrange
         var client = QipClient.Create("https://example.com");
         var request = new ValidateRequest { Token = "1234567890123456" };
@@ -128,4 +138,3 @@ public class QipClientTests
         Assert.Equal("890123456", result.Username);
     }
 }
-

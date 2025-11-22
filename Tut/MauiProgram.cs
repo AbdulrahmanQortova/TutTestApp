@@ -3,6 +3,8 @@ using Microsoft.Extensions.Logging;
 using Plugin.LocalNotification;
 using Plugin.LocalNotification.AndroidOption;
 using Tut.Common.Business;
+using Tut.Common.Managers;
+using Tut.Common.Mocks;
 using Tut.PageModels.Popups;
 using Tut.Popups;
 using TutMauiCommon.Services;
@@ -43,6 +45,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IShellService, ShellService>();
         builder.Services.AddSingleton<ILocationService, MockLocationService>();
         builder.Services.AddSingleton<IGeoService, MockGeoService>();
+        builder.Services.AddSingleton<IUserTripManager, MockUserTripManager>();
 
 
         builder.Services.AddTransientPopup<ArrivedPopup, ArrivedPopupModel>();
