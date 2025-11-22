@@ -25,6 +25,14 @@ public partial class QMapModel : ObservableObject
     [ObservableProperty]
     private MRect _extent = new(30.5, 30.5, 31, 31);
 
+    public void ClearAll()
+    {
+        Routes.Clear();
+        Cars.Clear();
+        EndPoints.Clear();
+        Stops.Clear();
+        Lines.Clear();
+    }
 
     public QMapModel()
     {

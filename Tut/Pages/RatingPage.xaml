@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:pageModels="clr-namespace:Tut.PageModels"
+             x:Class="Tut.Pages.RatingPage"
+             x:DataType="pageModels:RatingPageModel"
+             >
+
+            <Grid RowDefinitions="auto,*,auto"
+                      BackgroundColor="WhiteSmoke">
+                <Border StrokeShape="RoundRectangle 11" Padding="20,15" Margin="20"
+                HorizontalOptions="Start" BackgroundColor="WhiteSmoke">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding CallSupportCommand}"/>
+                    </Border.GestureRecognizers>
+                    <HorizontalStackLayout Spacing="10">
+                        <Image Source="call" WidthRequest="18"/>
+                        <Label Text="Call care center" FontSize="16" FontAttributes="Bold"/>
+                    </HorizontalStackLayout>
+                </Border>
+                <VerticalStackLayout Grid.Row="1"
+                             VerticalOptions="Center"
+                             Margin="10,20" Spacing="10">
+                    <Label Text="How was your Trip" FontSize="18"
+                   FontAttributes="Bold" HorizontalOptions="Center"/>
+                    <Label Text="We hope you enjoyed your ride"
+                   FontSize="11" TextColor="Gray"
+                   HorizontalOptions="Center" HorizontalTextAlignment="Center"/>
+                    <CollectionView ItemsSource="{Binding Ratings}" HorizontalOptions="Center" Margin="0,20">
+                        <CollectionView.ItemsLayout>
+                            <LinearItemsLayout Orientation="Horizontal" ItemSpacing="7" />
+                        </CollectionView.ItemsLayout>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Grid >
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding BindingContext.SelectRatingCommand, Source={x:Reference rootPage}}" CommandParameter="{Binding .}" />
+                                    </Grid.GestureRecognizers>
+                                    <Grid.Resources>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Padding" Value="10"/>
+                                            <Setter Property="StrokeThickness" Value="1"/>
+                                            <Setter Property="Stroke" Value="#D0A153"/>
+                                            <Setter Property="BackgroundColor" Value="Bisque"/>
+                                            <Setter Property="StrokeShape" Value="RoundRectangle 40"/>
+                                            <Setter Property="HorizontalOptions" Value="Center"/>
+                                            <Setter Property="VerticalOptions" Value="Center"/>
+                                        </Style>
+                                    </Grid.Resources>
+                                    <Border>
+                                        <Image Source="{Binding ImageName}" 
+                                                 Aspect="AspectFill" 
+                                                 HeightRequest="{Binding ImageHeight}" 
+                                                 WidthRequest="{Binding ImageWidth}" />
+
+                                    </Border>
+
+                                    <!--<ImageButton Source="{Binding ImageName}" 
+                             Aspect="AspectFill" 
+                             HeightRequest="{Binding ImageHeight}" 
+                             WidthRequest="{Binding ImageWidth}" />-->
+                                </Grid>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+
+                    <CollectionView ItemsSource="{Binding Reasons}" HorizontalOptions="Center" Margin="0,20" 
+                                    IsVisible="{Binding ShowNote}">
+                        <CollectionView.ItemsLayout>
+                            <LinearItemsLayout Orientation="Horizontal" ItemSpacing="7" />
+                        </CollectionView.ItemsLayout>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Grid >
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding BindingContext.SelectReasonCommand, Source={x:Reference rootPage}}" CommandParameter="{Binding .}" />
+                                    </Grid.GestureRecognizers>
+
+                                    <Border Padding="20,3" HeightRequest="{Binding Height}" VerticalOptions="Center"
+                                        Stroke="{StaticResource Primary}" StrokeThickness="1" StrokeShape="RoundRectangle 10" 
+                                        BackgroundColor="{Binding SelectedBackground}">
+                                        <Label Text="{Binding Reason}" VerticalOptions="Center" 
+                                               TextColor="{StaticResource PrimaryDarkText}">
+                                            <Label.Triggers>
+                                                <DataTrigger TargetType="Label" 
+                                                             Binding="{Binding SelectedBackground}" 
+                                                             Value="#A47C3A">
+                                                    <Setter Property="TextColor" Value="White" />
+                                                </DataTrigger>
+                                            </Label.Triggers>
+                                        </Label>
+                                    </Border>
+                                </Grid>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+
+
+                    <Border StrokeShape="RoundRectangle 5" BackgroundColor="White" Stroke="LightGray" IsVisible="{Binding ShowNote}">
+                        <Editor Text="{Binding SelectedRating.Note}" Placeholder="how can we improve our service"/>
+                    </Border>
+                </VerticalStackLayout>
+                <Button Grid.Row="2" Text="Submit"  Command="{Binding RatingCommand}" VerticalOptions="End" Margin="20"/>
+            </Grid>
+
+</ContentPage>

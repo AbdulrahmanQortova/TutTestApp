@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             xmlns:pageModels="clr-namespace:Tut.PageModels"
+             xmlns:models="clr-namespace:Tut.Common.Models;assembly=Tut_Common"
+             x:Class="Tut.Pages.SetLocationPage"
+             x:DataType="pageModels:SetLocationPageModel"
+             Title="Set Location"
+             BackgroundColor="{DynamicResource PageBackgroundColor}"
+             Shell.NavBarIsVisible="True">
+    
+    <Grid RowDefinitions="Auto,*,Auto">
+        
+        <!-- Search Bar -->
+            <Border 
+                    Stroke="{DynamicResource PrimaryBorderColor}"
+                    BackgroundColor="{DynamicResource BackgroundColor}"
+                    HeightRequest="48"
+                    StrokeShape="RoundRectangle 10">
+                <Grid ColumnDefinitions="20,*,Auto">
+                    
+                    <Entry Grid.Column="1"
+                           x:Name="PlacesEntry"
+                           Text="{Binding SearchTerm}"
+                           Placeholder="Where to?"
+                           ReturnCommand="{Binding CompleteSearchCommand}"/>
+                    
+                    <ImageButton Grid.Column="2"
+                                Source="x.png" 
+                                Command="{Binding ClearSearchCommand}"
+                                IsVisible="{Binding ShowClearButton}"
+                                HeightRequest="20"
+                                WidthRequest="20"
+                                Margin="0,0,10,0">
+                        <ImageButton.Behaviors>
+                            <toolkit:IconTintColorBehavior TintColor="{StaticResource PrimaryTextColor}" />
+                        </ImageButton.Behaviors>
+                        
+                    </ImageButton>
+                </Grid>
+            </Border>
+
+        <!-- Places List -->
+        <CollectionView Grid.Row="1"
+                        Margin="15,10,15,0"
+                        ItemsSource="{Binding Places}"
+                        SelectionMode="Single"
+                        SelectedItem="{Binding SelectedPlace}"
+                        SelectionChangedCommand="{Binding PlacesSelectionChangedCommand}">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="models:Place">
+                    <Border Margin="0,5"
+                            Padding="15,10"
+                            BackgroundColor="{DynamicResource BackgroundColor}"
+                            StrokeShape="RoundRectangle 10">
+                        <Grid ColumnDefinitions="40,*" ColumnSpacing="10">
+                            <Ellipse BackgroundColor="#353535" WidthRequest="40" HeightRequest="40" />
+                            <Image Grid.Column="0"
+                                   Source="location.png"
+                                   HeightRequest="24"
+                                   WidthRequest="24"
+                                   >
+                                <Image.Behaviors>
+                                    <toolkit:IconTintColorBehavior TintColor="{StaticResource SecondaryTextColor}"/>
+                                </Image.Behaviors>
+                            </Image>
+                            
+                            <VerticalStackLayout Grid.Column="1" Spacing="5">
+                                <Label Text="{Binding Name}"
+                                       FontSize="16"
+                                       TextColor="{DynamicResource PrimaryTextColor}"
+                                       FontAttributes="Bold"/>
+                                <Label Text="{Binding Address}"
+                                       FontSize="14"
+                                       TextColor="{DynamicResource SecondaryTextColor}"/>
+                            </VerticalStackLayout>
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+            
+            <!-- Set Location on Map Button -->
+            <CollectionView.Footer>
+                <Border Margin="0,5"
+                        Padding="15,10"
+                        BackgroundColor="{DynamicResource BackgroundColor}"
+                        StrokeShape="RoundRectangle 10">
+                    <Grid ColumnDefinitions="40,*"
+                          ColumnSpacing="10"
+                          HeightRequest="48"
+                          >
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding SetLocationOnMapCommand}"/>
+                        </Grid.GestureRecognizers>
+                        <Ellipse BackgroundColor="#353535" WidthRequest="40" HeightRequest="40" />
+                        <Image Grid.Column="0"
+                               Source="location.png"
+                               HeightRequest="24"
+                               WidthRequest="24"
+                               >
+                               <Image.Behaviors>
+                                   <toolkit:IconTintColorBehavior TintColor="LightBlue"/>
+                               </Image.Behaviors>
+
+                        </Image>
+                        
+                        <Label Grid.Column="1"
+                               Text="Set location on map"
+                               FontSize="16"
+                               FontAttributes="Bold"
+                               TextColor="{DynamicResource PrimaryTextColor}"
+                               VerticalOptions="Center"/>
+                    </Grid>
+                </Border>
+            </CollectionView.Footer>
+        </CollectionView>
+
+    </Grid>
+</ContentPage>

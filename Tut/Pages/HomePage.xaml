@@ -1,0 +1,141 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:pageModels="clr-namespace:Tut.PageModels"
+             xmlns:models="clr-namespace:Tut.Common.Models;assembly=Tut_Common"
+             x:Class="Tut.Pages.HomePage"
+             x:DataType="pageModels:HomePageModel"
+             BackgroundColor="{DynamicResource PageBackgroundColor}"
+             >
+                <!-- Header -->
+             <ScrollView Margin="0,32,0,0">
+                 <VerticalStackLayout Spacing="12"
+                                      Margin="16, 0">
+                     <Grid  
+                           HeightRequest="64" ColumnSpacing="10">
+                         <Grid.ColumnDefinitions>
+                             <ColumnDefinition Width="64"></ColumnDefinition>
+                             <ColumnDefinition Width="*"></ColumnDefinition>
+                             <ColumnDefinition Width="48"></ColumnDefinition>
+                         </Grid.ColumnDefinitions>
+                         <Image Grid.Column="0" 
+                                Source="neo/avatar.png" 
+                         />
+                         <VerticalStackLayout Grid.Column="1"
+                                              VerticalOptions="Center">
+                             <Label Text="Hi Khaled" TextColor="{DynamicResource SecondaryTextColor}"/>
+                             <Label Text="Good Morning" 
+                                    TextColor="{DynamicResource PrimaryTextColor}"/>
+                         </VerticalStackLayout>
+                            
+                         <Rectangle Grid.Column="2"
+                                    WidthRequest="48"
+                                    HeightRequest="48"
+                                    RadiusX="8"
+                                    RadiusY="8"
+                                    BackgroundColor="{DynamicResource BackgroundColor}"
+                         />
+                         <Image Grid.Column="2"
+                                Source="neo/notification.png"
+                                HeightRequest="20"
+                                WidthRequest="20"
+                         />
+                            
+                     </Grid>
+
+                     <Border 
+                            BackgroundColor="{DynamicResource BackgroundColor}" 
+                            HeightRequest="54"
+                            StrokeShape="RoundRectangle 8,8,8,8" 
+                            Padding="32,0"
+                            Stroke="Transparent"
+                            >
+                         <Label Text="Where To?" 
+                                FontSize="18"
+                                TextColor="{DynamicResource PrimaryTextColor}"
+                                VerticalOptions="Center" />
+                         <Border.GestureRecognizers>
+                             <TapGestureRecognizer Command="{Binding WhereToTappedCommand}"/>
+                         </Border.GestureRecognizers>
+                     </Border>
+
+                     <CollectionView ItemsSource="{Binding QuickPlaces}"
+                                     SelectionMode="Single"
+                                     SelectionChangedCommand="{Binding QuickPlaceSelectedCommand}"> 
+                         <CollectionView.ItemTemplate>
+                             <DataTemplate x:DataType="models:Place">
+                                 <Border BackgroundColor="Transparent"
+                                         Margin="0,5"
+                                         Padding="0"
+                                         Stroke="{DynamicResource BackgroundColor}"
+                                         StrokeShape="RoundRectangle 8,8,8,8"
+                                         HeightRequest="58"
+                                         >
+                                     <Grid ColumnDefinitions="50,*,auto"
+                                           RowSpacing="0"
+                                           Margin="8,0">
+                                         <Image Source="location.png" VerticalOptions="Center" HeightRequest="20" WidthRequest="20"/>
+                                         <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                                             <HorizontalStackLayout Spacing="2">
+                                                 <Label Text="{Binding Name}" 
+                                                        FontSize="16"
+                                                        TextColor="{DynamicResource PrimaryTextColor}"
+                                                        />
+                                             </HorizontalStackLayout>
+                                             <Label Text="{Binding Address}"
+                                                    FontSize="12"
+                                                    TextColor="{DynamicResource SecondaryTextColor}" />
+                                         </VerticalStackLayout>
+                                     </Grid>
+                                 </Border>
+                             </DataTemplate>
+                         </CollectionView.ItemTemplate>
+                     </CollectionView>
+
+                     <!-- Banner -->
+                     <CollectionView
+                         ItemsSource="{Binding Offers}"
+                         >
+                         <CollectionView.ItemsLayout>
+                             <LinearItemsLayout Orientation="Horizontal" ItemSpacing="5"/>
+                         </CollectionView.ItemsLayout>
+                         <CollectionView.ItemTemplate>
+                             <DataTemplate x:DataType="x:String">
+                                 <Image Source="{Binding .}"
+                                        HeightRequest="135"/>
+                             </DataTemplate>
+                         </CollectionView.ItemTemplate>
+                     </CollectionView>
+
+                     <!-- Services Banner -->
+                     <CollectionView
+                         ItemsSource="{Binding Services}"
+                         HorizontalOptions="Center"
+                         >
+                         <CollectionView.ItemsLayout>
+                             <LinearItemsLayout Orientation="Horizontal" ItemSpacing="13"/>
+                         </CollectionView.ItemsLayout>
+                         <CollectionView.ItemTemplate>
+                             <DataTemplate x:DataType="pageModels:ServiceType">
+                                 <Grid RowDefinitions="78,20">
+                                     <Rectangle WidthRequest="78"
+                                                HeightRequest="78"
+                                                RadiusX="8"
+                                                RadiusY="8"
+                                                BackgroundColor="{DynamicResource BackgroundColor}"/>
+                                         <Image Source="{Binding Image}" 
+                                                HeightRequest="32"
+                                                WidthRequest="32"/>
+                                         <Label Grid.Row="1"
+                                                HorizontalOptions="Center"
+                                                Text="{Binding Title}"
+                                                FontSize="12"
+                                                TextColor="{DynamicResource PrimaryTextColor}"/>
+                                 </Grid>
+                                 
+                             </DataTemplate>
+                         </CollectionView.ItemTemplate>
+                     </CollectionView>
+                 </VerticalStackLayout>
+             </ScrollView>
+</ContentPage>

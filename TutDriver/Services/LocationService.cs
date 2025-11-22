@@ -1,3 +1,4 @@
+using TutMauiCommon.Services;
 namespace TutDriver.Services;
 
 public partial class LocationService : ILocationService

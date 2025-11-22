@@ -90,9 +90,8 @@ public class Trip
 [ProtoContract]
 public class TripList
 {
-    [ProtoMember(1)]
-    public List<Trip>? Trips { get; init; }
-
+    [ProtoMember(1, IsRequired = true)]
+    public List<Trip> Trips { get; init; } = [];
     public TripList() { }
     public TripList(IEnumerable<Trip> trips)
     {

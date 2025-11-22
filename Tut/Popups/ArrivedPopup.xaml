@@ -1,0 +1,41 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:popups="clr-namespace:Tut.Popups"
+             x:Class="Tut.Popups.ArrivedPopup"
+             x:DataType="popups:ArrivedPopup"
+             BackgroundColor="#B3000000"
+             >
+    <Border VerticalOptions="Center" BackgroundColor="{StaticResource Gray100}"
+          Padding="20,30" Margin="30" StrokeShape="RoundRectangle 16">
+        <VerticalStackLayout Spacing="20">
+            <VerticalStackLayout.Resources>
+                <Style TargetType="Label">
+                    <Setter Property="HorizontalOptions" Value="Center"/>
+                    <Setter Property="HorizontalTextAlignment" Value="Center"/>
+                </Style>
+
+            </VerticalStackLayout.Resources>
+            <Image Source="{Binding Icon}"
+                   HorizontalOptions="Center"
+                   VerticalOptions="Center"
+                   WidthRequest="75" HeightRequest="75"/>
+            <Label Text="{Binding Title}"
+                   FontAttributes="Bold" FontSize="20"
+                   TextColor="{StaticResource Primary}"/>
+            <Label Text="{Binding Message}" TextColor="Black"/>
+
+            <Label FontSize="20">
+                <Label.FormattedText>
+                    <FormattedString>
+                        <Span  Text="{Binding Money}"  FontAttributes="Bold"
+                   TextColor="{StaticResource Primary}"/>
+                        <Span  Text="{Binding Currency}"  FontAttributes="Bold"
+                   TextColor="{StaticResource Primary}"/>
+                    </FormattedString>
+                </Label.FormattedText>
+
+            </Label>
+        </VerticalStackLayout>
+    </Border>
+</ContentView>

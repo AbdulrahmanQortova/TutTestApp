@@ -1,5 +1,4 @@
-
-namespace TutDriver.Services;
+namespace TutMauiCommon.Services;
 
 public class MockLocationService : ILocationService
 {

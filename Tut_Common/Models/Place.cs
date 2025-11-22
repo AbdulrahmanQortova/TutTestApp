@@ -30,6 +30,16 @@ public class Place
             Longitude = Longitude,
         };
     }
+    
+    public static Place NullPlace => new Place
+    {
+        Id = -1,
+        Name = "NullPlace",
+        Address = string.Empty,
+        Latitude = -1,
+        Longitude = -1,
+        PlaceType = PlaceType.Unspecified
+    };
 }
 
 

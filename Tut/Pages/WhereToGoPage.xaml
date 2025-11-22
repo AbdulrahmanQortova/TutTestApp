@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Tut.Pages.WhereToGoPage"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             xmlns:pageModels="clr-namespace:Tut.PageModels"
+             xmlns:models="clr-namespace:Tut.Common.Models;assembly=Tut_Common"
+             x:DataType="pageModels:WhereToGoPageModel"
+             x:Name="RootPage"
+             Background="{DynamicResource PageBackgroundColor}"
+             Shell.NavBarIsVisible="True"
+             >
+    
+    <Grid RowDefinitions="*,auto">
+        <ScrollView Grid.Row="0">
+            <VerticalStackLayout Spacing="5" Padding="15,10">
+                
+                <!-- Stops -->
+                <CollectionView ItemsSource="{Binding Stops}"
+                                SelectionMode="None"
+                                
+                                >
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="pageModels:Stop">
+                            <Border
+                                Stroke="{DynamicResource BackgroundColor}"
+                                Background="{DynamicResource BackgroundColor}"
+                                StrokeShape="RoundRectangle 4,4,4,4"
+                                HeightRequest="48" Margin="0,3"
+                            >
+                                <Grid ColumnDefinitions="50,*,48">
+                                    <Label
+                                        Grid.Column="1"
+                                        Text="{Binding Name}"
+                                        TextColor="{DynamicResource PrimaryTextColor}"
+                                        FontSize="16"
+                                        VerticalTextAlignment="Center"
+                                    />
+                                    <ImageButton
+                                        Grid.Column="2"
+                                        WidthRequest="48"
+                                        Aspect="Center"
+                                        IsVisible="{Binding ShowAdd}"
+                                        Source="plus.png"
+                                        Command="{Binding AddStopCommand, Source={RelativeSource AncestorType={x:Type pageModels:WhereToGoPageModel}}, x:DataType={x:Type pageModels:WhereToGoPageModel}}"
+                                        CommandParameter="{Binding .}"
+                                        >
+                                        <ImageButton.Behaviors>
+                                            <toolkit:IconTintColorBehavior TintColor="{StaticResource PrimaryTextColor}" />
+                                        </ImageButton.Behaviors>
+                                    </ImageButton>
+                                    <ImageButton
+                                        Grid.Column="2"
+                                        WidthRequest="48"
+                                        Aspect="Center"
+                                        IsVisible="{Binding ShowDelete}"
+                                        Source="minus.png"
+                                        Command="{Binding RemoveStopCommand, Source={RelativeSource AncestorType={x:Type pageModels:WhereToGoPageModel}}, x:DataType={x:Type pageModels:WhereToGoPageModel}}"
+                                        CommandParameter="{Binding .}"
+                                    >
+                                        <Image.Behaviors>
+                                            <toolkit:IconTintColorBehavior TintColor="{StaticResource PrimaryTextColor}" />
+                                        </Image.Behaviors>
+                                    </ImageButton>
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding StopLocationTappedCommand, Source={RelativeSource AncestorType={x:Type pageModels:WhereToGoPageModel}}, x:DataType={x:Type pageModels:WhereToGoPageModel}}"
+                                                              CommandParameter="{Binding .}"/>
+                                    </Grid.GestureRecognizers>
+                                </Grid>
+        
+                            </Border>    
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                    
+                </CollectionView>
+                <!--saved places-->
+                <CollectionView ItemsSource="{Binding SavedPlaces}" 
+                                BackgroundColor="Transparent" 
+                                VerticalOptions="Start"
+                                SelectedItem="{Binding SelectedSavedPlace}"
+                                SelectionChangedCommand="{Binding SavedPlaceSelectedCommand}"
+                                SelectionMode="Single"
+                                Margin="0,15,0,0">
+                    <CollectionView.Header>
+                        <Label Text="" 
+                               FontSize="18" 
+                               FontAttributes="Bold"
+                               Margin="0,0,0,10"/>
+                    </CollectionView.Header>
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="models:Place">
+                            <Grid ColumnDefinitions="50,*,auto" RowSpacing="0" RowDefinitions="auto,auto" Padding="0,8">
+<!--                                <Image Source="{Binding Icon}" VerticalOptions="Center" /> -->
+                                <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                                    <HorizontalStackLayout Spacing="2">
+                                        <Label Text="{Binding Name}" FontSize="16" FontAttributes="Bold" />
+                                    </HorizontalStackLayout>
+                                    <Label Text="{Binding Address}" FontSize="11" TextColor="{StaticResource Gray200}" />
+                                </VerticalStackLayout>
+
+                                <BoxView Grid.Column="1" Grid.Row="1" Grid.ColumnSpan="2" VerticalOptions="Center"
+                  BackgroundColor="{StaticResource Gray100}" HeightRequest="0.5"  />
+                            </Grid>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                 
+                </CollectionView>
+               
+
+            </VerticalStackLayout> 
+        </ScrollView>
+        <Button Grid.Row="1" Text="Submit" Command="{Binding SubmitLocationCommand}" Margin="15"/>
+    </Grid>
+</ContentPage>

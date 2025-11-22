@@ -1,0 +1,37 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:mapsui="clr-namespace:Mapsui.UI.Maui;assembly=Mapsui.UI.Maui"
+             xmlns:pageModels="clr-namespace:Tut.PageModels"
+             x:Class="Tut.Pages.PickOnMapPage"
+             x:DataType="pageModels:PickOnMapViewModel"
+             >
+            <Grid ColumnDefinitions="*" RowDefinitions=".6*,Auto, 70, Auto">
+        <!--begin: Map row-->
+        <Image Source="mapcenter.png" HorizontalOptions="Center" VerticalOptions="Center"
+               ZIndex="2" Margin="0"
+               WidthRequest="40" HeightRequest="40" IsVisible="{Binding ShowCenter}"/>
+        
+        <mapsui:MapControl x:Name="MapControl" 
+                        ZIndex="1"
+                        HorizontalOptions="FillAndExpand" VerticalOptions="FillAndExpand"
+                        Grid.Row="0"
+                     />
+        <!--end: Map row-->
+        <!--begin: Place Name-->
+        <Border Background="#FFF"
+        StrokeShape="RoundRectangle 15"
+        Grid.Row="2" Margin="4">
+            <Grid ColumnDefinitions="40,*">
+                <Image Source="locationmarker.png" WidthRequest="20" HeightRequest="20" 
+                       VerticalOptions="Center"/>
+                <Label Text="{Binding PlaceName}" TextColor="#000"
+                        FontFamily="Helvetica" FontSize="16" FontAttributes="Bold"
+                        Grid.Column="1" VerticalOptions="Center"/>
+            </Grid>
+        </Border>
+        <!--begin: Confirmation button-->
+        <Button Grid.Row="3" Margin="5" Text="Confirm" ZIndex="1" Command="{Binding ConfirmButtonCommand}" />
+        <!--end: Confirmation button-->
+    </Grid>
+</ContentPage>

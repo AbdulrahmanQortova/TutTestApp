@@ -5,6 +5,7 @@ using Tut.Common.Managers;
 using Tut.Common.Models;
 using TutDriver.Pages;
 using TutDriver.Services;
+using TutMauiCommon.Services;
 namespace TutDriver.PageModels;
 
 public partial class HomePageModel(
@@ -12,7 +13,7 @@ public partial class HomePageModel(
     DriverTripManager driverTripManager,
     ILocationService locationService,
     INotificationService notificationService
-    ) : ObservableObject
+) : ObservableObject
 {
     [ObservableProperty]
     private string _fullName = string.Empty;
@@ -25,7 +26,7 @@ public partial class HomePageModel(
 
     private bool _isInitialized;
 
-    
+
     public async Task StartAsync()
     {
         driverTripManager.OfferReceived += HandleOfferReceived;
@@ -33,7 +34,6 @@ public partial class HomePageModel(
         driverTripManager.StatusChanged += HandleTripManagerStatusChanged;
         if (!_isInitialized) await InitializeAsync();
     }
-
     public Task StopAsync()
     {
         driverTripManager.OfferReceived -= HandleOfferReceived;
@@ -70,7 +70,7 @@ public partial class HomePageModel(
                 await Shell.Current.DisplayAlertAsync("Permission Error", "Location Permission MUST be allowed for Tut Driver App to run.", "Ok");
             }
         }
-        
+
         await locationService.SetupBackgroundLocation();
         locationService.LocationChanged += (_, e) =>
         {
@@ -93,11 +93,11 @@ public partial class HomePageModel(
             });
         };
         await locationService.StartLocationUpdates();
-        
+
         driverLocationManagerService.SetAccessToken("DA10");
         driverLocationManagerService.ErrorReceived += (_, e) => Shell.Current.DisplayAlertAsync("Error", "LocationManager Error: " + e.ErrorText, "Ok");
         await driverLocationManagerService.Connect(CancellationToken.None);
-        
+
         driverTripManager.SetAccessToken("DA10");
         driverTripManager.ErrorReceived += (_, e) => Shell.Current.DisplayAlertAsync("Error", "DriverTripManager Error: " + e.ErrorText, "Ok");
         await driverTripManager.Connect(CancellationToken.None);
@@ -108,7 +108,7 @@ public partial class HomePageModel(
             _ = driverLocationManagerService.Disconnect();
         };
     }
-    
+
     [RelayCommand]
     private async Task AcceptTripAsync()
     {
@@ -147,12 +147,24 @@ public partial class HomePageModel(
     private void HandleTripManagerStatusChanged(object? s, StatusUpdateEventArgs e)
     {
         if (driverTripManager.CurrentTrip is null) return;
-        if(driverTripManager.CurrentTrip.Status != TripState.Requested && driverTripManager.CurrentTrip.Status != TripState.Acknowledged && driverTripManager.CurrentTrip.Status != TripState.Ended)
-            MainThread.BeginInvokeOnMainThread(async () => await Shell.Current.GoToAsync(nameof(TripPage)));
+        if (driverTripManager.CurrentTrip.Status != TripState.Requested && driverTripManager.CurrentTrip.Status != TripState.Acknowledged && driverTripManager.CurrentTrip.Status != TripState.Ended)
+        {
+            try
+            {
+                MainThread.BeginInvokeOnMainThread(async () =>
+                    await Shell.Current.GoToAsync(nameof(TripPage)));
+            }
+            catch
+            {
+                // Empty catch to guard the async void from crashing
+            }
+        }
     }
     
-    private void HandleConnectionStateChanged(object? s, ConnectionStateChangedEventArgs e)
+    private void HandleConnectionStateChanged(object? sender, ConnectionStateChangedEventArgs e)
     {
-        IsOffline = e.NewState != ConnectionState.Connected;
     }
+
+
 }
+            

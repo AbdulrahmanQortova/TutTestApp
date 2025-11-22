@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:mapsui="clr-namespace:Mapsui.UI.Maui;assembly=Mapsui.UI.Maui"
+             xmlns:views="clr-namespace:Tut.Views"
+             xmlns:pageModels="clr-namespace:Tut.PageModels"
+             x:Class="Tut.Pages.TripPage"
+             x:DataType="pageModels:TripPageModel"
+             BackgroundColor="{DynamicResource PageBackgroundColor}"
+
+             Shell.NavBarHasShadow="False"
+             Shell.NavBarIsVisible="False">
+
+    <Grid RowDefinitions="*,auto">
+        <!--begin: Map row-->
+        <Image x:Name="AnimationImage" Source="locationanimation.png"
+               Grid.Row="0"
+               HorizontalOptions="Center" VerticalOptions="Center"
+               ZIndex="2" Margin="0"
+               WidthRequest="200" HeightRequest="200"
+               InputTransparent="True"
+               IsVisible="{Binding IsAnimationVisible}" />
+
+        <mapsui:MapView x:Name="MapView"
+                        Grid.Row="0"
+                        ZIndex="1"
+                        HorizontalOptions="FillAndExpand" VerticalOptions="FillAndExpand" />
+        <!--end: Map row-->
+        <views:RideDetailsPopup x:Name="MyRideDetails" Grid.Row="1" />
+    </Grid>
+</ContentPage>

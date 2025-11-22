@@ -1,4 +1,4 @@
-namespace TutDriver.Services;
+namespace TutMauiCommon.Services;
 
 public interface ILocationService
 {

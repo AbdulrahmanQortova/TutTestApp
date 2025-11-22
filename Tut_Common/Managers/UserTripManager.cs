@@ -8,7 +8,7 @@ using ProtoBuf.Grpc;
 
 namespace Tut.Common.Managers;
 
-public class UserTripManager
+public class UserTripManager : IUserTripManager
 {
     private readonly IGUserTripService _userTripService;
     private Channel<UserTripPacket>? _requestChannel;
@@ -300,37 +300,4 @@ public class UserTripManager
 }
 
 
-public enum ConnectionState
-{
-    Disconnected,
-    Connecting,
-    Connected,
-    Reconnecting
-}
 
-public class InquireResultEventArgs : EventArgs
-{
-    public Trip? Trip { get; set; }
-}
-public class StatusUpdateEventArgs : EventArgs
-{
-    public Trip? Trip { get; set; }
-}
-public class ErrorReceivedEventArgs : EventArgs
-{
-    public string ErrorText { get; set; } = string.Empty;
-}
-public class NotificationReceivedEventArgs : EventArgs
-{
-    public string NotificationText { get; set; } = string.Empty;
-}
-public class DriverLocationsReceivedEventArgs : EventArgs
-{
-    public List<GLocation> Locations { get; set; } = [];
-}
-
-public class ConnectionStateChangedEventArgs : EventArgs
-{
-    public ConnectionState OldState { get; set; }
-    public ConnectionState NewState { get; set; }
-}
