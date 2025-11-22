@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using TutBackend.Data;
 using Tut.Common.Models;
+using TutBackend.Services;
 
 namespace TutBackend.Repositories;
 
@@ -46,5 +47,21 @@ public class DriverRepository(TutDbContext context) : Repository<Driver>(context
             dt.Driver.TotalEarnings = dt.TotalEarnings;
         });
         return await lst.Select(dt => dt.Driver).ToListAsync();
+    }
+    
+    public async Task SetDriverStateAsync(int driverId, DriverState state)
+    {
+        var driver = await _dbSet.FindAsync(driverId);
+        if (driver is null)
+            throw new KeyNotFoundException($"Driver with Id {driverId} not found.");
+        await SetDriverStateAsync(driver, state);
+    }
+    
+    public async Task SetDriverStateAsync(Driver driver, DriverState state)
+    {
+        DriverCache.SetDriverState(driver.Id, state);
+        driver.State = state;
+        _context.Update(driver);
+        await _context.SaveChangesAsync();
     }
 }

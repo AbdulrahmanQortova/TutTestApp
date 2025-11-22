@@ -10,7 +10,7 @@ public class TripDistributor(
     ) 
     : BackgroundService
 {
-    private readonly TimeSpan _delayBetweenIterations = TimeSpan.FromSeconds(5);
+    private readonly TimeSpan _delayBetweenIterations = TimeSpan.FromMilliseconds(200);
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         await DistributionLoop(stoppingToken);
@@ -39,20 +39,26 @@ public class TripDistributor(
                 logger.LogInformation("Found unassigned trip {TripId}, finding best driver...", trip.Id);
 
                 // Use the injected DriverSelector to pick the best driver
-                var bestDriver = await driverSelector.FindBestDriverAsync(trip, new HashSet<int>());
-                if (bestDriver is null)
+                int bestDriverId = await driverSelector.FindBestDriverIdAsync(trip, new HashSet<int>());
+                if (bestDriverId < 0)
                 {
                     logger.LogInformation("No suitable driver found for trip {TripId}", trip.Id);
                     // Wait a bit before retrying so we don't tight-loop on the same trip
                     await Task.Delay(_delayBetweenIterations, cancellationToken);
                     continue;
                 }
-                bestDriver = await driverRepository.GetByIdAsync(bestDriver.Id);
+                Driver? bestDriver = await driverRepository.GetByIdAsync(bestDriverId);
+                if(bestDriver is null)
+                {
+                    logger.LogInformation("No driver found with specified Id {DriverId}", bestDriverId);
+                    // Wait a bit before retrying so we don't tight-loop on the same trip
+                    await Task.Delay(_delayBetweenIterations, cancellationToken);
+                    continue;
+                }
 
                 // Assign driver and persist
                 trip.Driver = bestDriver;
-                bestDriver!.State = DriverState.Requested;
-                await driverRepository.UpdateAsync(bestDriver);
+                await driverRepository.SetDriverStateAsync(bestDriver, DriverState.Requested);
                 await tripRepository.UpdateAsync(trip);
                 logger.LogInformation("Assigned driver {DriverId} to trip {TripId}", bestDriver.Id, trip.Id);
                 await Task.Delay(_delayBetweenIterations, cancellationToken);

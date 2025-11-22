@@ -31,7 +31,7 @@ public class GDriverLocationService(IDriverLocationRepository driverLocationRepo
                 _driver = await driverRepository.GetByIdAsync(_driver.Id);
                 if (_driver is null)
                     throw new RpcException(new Status(StatusCode.NotFound, "Driver not found in Database"));
-                await driverLocationRepository.AddAsync(new DriverLocation
+                await driverLocationRepository.SaveDriverLocationAsync(new DriverLocation
                 {
                     DriverId = _driver.Id,
                     DriverName = _driver.FullName,

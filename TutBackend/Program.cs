@@ -82,7 +82,7 @@ public static class Program
         if ((await driverRepository.GetAllDriversAsync()).Count > 0)
             return;
         
-        for (int i = 0; i < 10; i++)
+        for (int i = 0; i < 100; i++)
         {
             await driverRepository.AddAsync(new Driver
             {
@@ -94,7 +94,7 @@ public static class Program
                 NationalId = "123"
             });
         }
-        for (int i = 0; i < 10; i++)
+        for (int i = 0; i < 200; i++)
         {
             await userRepository.AddAsync(new User
             {

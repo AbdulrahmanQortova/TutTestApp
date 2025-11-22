@@ -64,7 +64,7 @@ public class DriverSelector
                 continue;
 
             // Only consider available drivers
-            if (loc.DriverState != DriverState.Available)
+            if (DriverCache.GetDriverState(loc.DriverId) != DriverState.Available)
                 continue;
 
             // Compute cost using driver's reported location (from the location repository)
@@ -125,7 +125,7 @@ public class DriverSelector
         foreach (var loc in locations)
         {
             // Only consider available drivers
-            if (loc.DriverState != DriverState.Available)
+            if(DriverCache.GetDriverState(loc.DriverId) != DriverState.Available)
                 continue;
 
             // Compute cost using driver's reported location (from the location repository)

@@ -36,8 +36,7 @@ public class GDriverTripService(
         var driver = await AuthUtils.AuthorizeDriver(context, driverRepository, qipClient);
         var authorizedDriver = driver ?? throw new RpcException(new Status(StatusCode.Unauthenticated, "Unauthorized"));
 
-        authorizedDriver.State = DriverState.Inactive;
-        await driverRepository.UpdateAsync(authorizedDriver);
+        await driverRepository.SetDriverStateAsync(authorizedDriver.Id, DriverState.Inactive);
         _driverId = authorizedDriver.Id;
 
         // Create cancellation token source linked to the gRPC context cancellation token
@@ -53,8 +52,7 @@ public class GDriverTripService(
         if (trip is not null)
         {
             _activeTripId = trip.Id;
-            authorizedDriver.State = GetDriverStateForTripState(trip.Status);
-            await driverRepository.UpdateAsync(authorizedDriver);
+            await driverRepository.SetDriverStateAsync(authorizedDriver.Id, GetDriverStateForTripState(trip.Status));
         }
 
         await _responseChannel.Writer.WriteAsync(DriverTripPacket.StatusUpdate(trip), _cancellation.Token);
@@ -106,8 +104,7 @@ public class GDriverTripService(
             Driver? scopedDriver = await scopedDriverRepo.GetByIdAsync(_driverId);
             if (scopedDriver is not null)
             {
-                scopedDriver.State = DriverState.Offline;
-                await scopedDriverRepo.UpdateAsync(scopedDriver);
+                await scopedDriverRepo.SetDriverStateAsync(scopedDriver, DriverState.Offline);
                 logger.LogInformation("Driver {Driver} set to Offline state on disconnect", scopedDriver.FullName);
             }
         }
@@ -237,8 +234,7 @@ public class GDriverTripService(
             return DriverTripPacket.Error($"You are already in {scopedDriver.State.ToString()} state");
         }
         logger.LogDebug("Driver {Driver} punched in", scopedDriver.FullName);
-        scopedDriver.State = DriverState.Available;
-        await scopedDriverRepo.UpdateAsync(scopedDriver);
+        await driverRepository.SetDriverStateAsync(scopedDriver.Id, DriverState.Available);
         return DriverTripPacket.Success();
     }
     
@@ -251,8 +247,7 @@ public class GDriverTripService(
             return DriverTripPacket.Error($"You can't punch out when your in {scopedDriver.State.ToString()} state");
         }
         logger.LogDebug("Driver {Driver} punched out", scopedDriver.FullName);
-        scopedDriver.State = DriverState.Inactive;
-        await scopedDriverRepo.UpdateAsync(scopedDriver);
+        await scopedDriverRepo.SetDriverStateAsync(scopedDriver, DriverState.Inactive);
         return DriverTripPacket.Success();
     }
 
@@ -277,8 +272,7 @@ public class GDriverTripService(
         if (sanityResult is not null) return sanityResult;
 
         logger.LogDebug("!!Driver {Driver} Accepted Trip {Trip}", scopedDriver!.FullName, scopedTrip!.Id);
-        scopedDriver.State = DriverState.EnRoute;
-        await scopedDriverRepo.UpdateAsync(scopedDriver);
+        await scopedDriverRepo.SetDriverStateAsync(scopedDriver, DriverState.EnRoute);
         scopedTrip.Status = TripState.Accepted;
         DriverLocation? driverLocation = await driverLocationRepository.GetLatestDriverLocation(scopedDriver.Id);
         if (driverLocation is not null)
@@ -321,8 +315,7 @@ public class GDriverTripService(
         
         logger.LogDebug("Driver {Driver} Started Trip: {Trip}", scopedDriver!.FullName, scopedTrip!.Id);
 
-        scopedDriver.State = DriverState.OnTrip;
-        await scopedDriverRepo.UpdateAsync(scopedDriver);
+        await scopedDriverRepo.SetDriverStateAsync(scopedDriver, DriverState.OnTrip);
         scopedTrip.Status = TripState.Ongoing;
         scopedTrip.StartTime = DateTime.UtcNow;
         await scopedTripRepo.UpdateAsync(scopedTrip);
@@ -385,8 +378,7 @@ public class GDriverTripService(
         
         logger.LogDebug("Driver {Driver} Reported Payment, Trip: {Trip}, Amount: {Amount}", scopedDriver!.FullName, scopedTrip!.Id, scopedTrip.ActualCost);
         
-        scopedDriver.State = DriverState.Available;
-        await scopedDriverRepo.UpdateAsync(scopedDriver);
+        await scopedDriverRepo.SetDriverStateAsync(scopedDriver, DriverState.Available);
         scopedTrip.Status = TripState.Ended;
         await scopedTripRepo.UpdateAsync(scopedTrip);
         _activeTripId = -1;

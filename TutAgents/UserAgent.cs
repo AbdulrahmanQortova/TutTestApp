@@ -225,8 +225,8 @@ public class UserAgent
 
     public class Options
     {
-        public readonly GLocation AreaBottomLeft = new GLocation { Latitude = 30, Longitude = 31.15 };
-        public readonly GLocation AreaTopRight = new GLocation { Latitude = 30.15, Longitude = 31.5 };
-        public readonly int MaxNumberOfStops = 4;  // including pickup and dropOff.
+        public readonly GLocation AreaBottomLeft = new GLocation { Latitude = 30, Longitude = 31.00 };
+        public readonly GLocation AreaTopRight = new GLocation { Latitude = 30.30, Longitude = 31.70 };
+        public readonly int MaxNumberOfStops = 3;  // including pickup and dropOff.
     }
 }
