@@ -511,6 +511,7 @@ public partial class TripPageModel : ObservableObject, IQueryAttributable, IDisp
         }
         
         MapModel.CalculateExtent();
+        MapModel.OnChanged();
     }
     
     private void UpdateDriverLocationsOnMap(List<GLocation> locations)
@@ -530,6 +531,7 @@ public partial class TripPageModel : ObservableObject, IQueryAttributable, IDisp
         }
         
         MapModel.CalculateExtent();
+        MapModel.OnChanged();
     }
     
     private void SetBeforeRequestUiState()

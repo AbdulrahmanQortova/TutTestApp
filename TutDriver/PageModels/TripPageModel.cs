@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Collections.ObjectModel;
 using Tut.Common.Managers;
@@ -203,6 +203,7 @@ public partial class TripPageModel(
             Lines = new ObservableCollection<QMapModel.MapLine>(lines)
         };
         mapModel.CalculateExtent();
+        mapModel.OnChanged();
         
         MapModel = mapModel;
 

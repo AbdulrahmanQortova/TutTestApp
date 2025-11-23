@@ -3,8 +3,10 @@ using Microsoft.Extensions.Logging;
 using Plugin.LocalNotification;
 using Plugin.LocalNotification.AndroidOption;
 using Tut.Common.Business;
+using Tut.Common.GServices;
 using Tut.Common.Managers;
 using Tut.Common.Mocks;
+using Tut.PageModels;
 using Tut.PageModels.Popups;
 using Tut.Popups;
 using TutMauiCommon.Services;
@@ -42,6 +44,10 @@ public static class MauiProgram
         builder.Logging.AddDebug();
 #endif
         
+//            builder.Services.AddSingleton<IGrpcChannelFactory>(new GrpcChannelFactory("http://192.168.1.21:5002"));
+        builder.Services.AddSingleton<IGrpcChannelFactory>(new GrpcChannelFactory("http://qortova.com:8080"));
+
+        
         builder.Services.AddSingleton<IShellService, ShellService>();
         builder.Services.AddSingleton<ILocationService, MockLocationService>();
         builder.Services.AddSingleton<IGeoService, MockGeoService>();
@@ -49,6 +55,19 @@ public static class MauiProgram
 
 
         builder.Services.AddTransientPopup<ArrivedPopup, ArrivedPopupModel>();
+        
+        
+        builder.Services.AddTransient<HomePageModel>();
+        builder.Services.AddTransient<TripPageModel>();
+        builder.Services.AddTransient<RideDetailsViewModel>();
+        builder.Services.AddTransient<LoginPageModel>();
+        builder.Services.AddTransient<MyTripsPageModel>();
+        builder.Services.AddTransient<PickOnMapViewModel>();
+        builder.Services.AddTransient<RatingPageModel>();
+        builder.Services.AddTransient<SetLocationPageModel>();
+        builder.Services.AddTransient<WhereToGoPageModel>();
+        
+        
         return builder.Build();
     }
 }

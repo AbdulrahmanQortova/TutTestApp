@@ -4,11 +4,28 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:local="clr-namespace:Tut"
+    xmlns:global="http://schemas.microsoft.com/dotnet/maui/global"
     Title="Tut">
 
-    <ShellContent
-        Title="Home"
-        ContentTemplate="{DataTemplate local:MainPage}"
-        Route="MainPage" />
+    <TabBar>
+        
+        <ShellContent Title=""
+                      Icon="tab_home.png"
+                      ContentTemplate="{DataTemplate global:HomePage}" />
+            
+        <ShellContent  Title=""
+                       Icon="tab_history.png"
+                       ContentTemplate="{DataTemplate global:MyTripsPage}" />
+
+        <ShellContent Title=""
+                      Icon="tab_wallet.png"
+                      ContentTemplate="{DataTemplate global:NotImplementedPage}"
+        />
+        <ShellContent Title=""
+                      Icon="tab_profile.png" 
+                      ContentTemplate="{DataTemplate global:NotImplementedPage}"
+        />
+      
+    </TabBar>
 
 </Shell>

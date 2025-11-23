@@ -7,6 +7,8 @@ namespace TutMauiCommon.ViewModels;
 
 public partial class QMapModel : ObservableObject
 {
+    public event EventHandler? Changed;
+
     [ObservableProperty] 
     private ObservableCollection<MapRoute> _routes = [];
     
@@ -32,6 +34,12 @@ public partial class QMapModel : ObservableObject
         EndPoints.Clear();
         Stops.Clear();
         Lines.Clear();
+        OnChanged();
+    }
+
+    public void OnChanged()
+    {
+        Changed?.Invoke(this, EventArgs.Empty);
     }
 
     public QMapModel()

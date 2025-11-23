@@ -154,6 +154,7 @@ public partial class LiveTrackingPageModel : ObservableObject
             Lines = new ObservableCollection<QMapModel.MapLine>(lines)
         };
         mapModel.CalculateExtent();
+        mapModel.OnChanged();
         
         MapModel = mapModel;
     }

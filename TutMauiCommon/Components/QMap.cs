@@ -95,10 +95,12 @@ public class QMap : Mapsui.Map
         if (_model != null)
         {
             _model.PropertyChanged -= OnModelPropertyChanged;
+            _model.Changed -= OnModelChanged;
         }
         _model = model;
         Redraw();
         _model.PropertyChanged += OnModelPropertyChanged;
+        _model.Changed += OnModelChanged;
     }
 
     public void Redraw()
@@ -134,6 +136,11 @@ public class QMap : Mapsui.Map
                 ViewportChanged();
                 break;
         }
+    }
+
+    private void OnModelChanged(object? sender, EventArgs e)
+    {
+        Redraw();
     }
 
     private void DrawModelRoutes()
