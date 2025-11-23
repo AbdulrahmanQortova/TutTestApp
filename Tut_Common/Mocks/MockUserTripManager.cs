@@ -8,6 +8,12 @@ public class MockUserTripManager : IUserTripManager
     private ConnectionState _connectionState = ConnectionState.Disconnected;
     private Trip? _currentTrip;
 
+    // Configurable timing delays (in milliseconds)
+    public int ConnectionDelayMs { get; init; } = 500;
+    public int InquiryDelayMs { get; init; } = 500;
+    public int StateTransitionDelayMs { get; init; } = 5000;
+    public int LongStateTransitionDelayMs { get; init; } = 10000;
+
     // Public read-only accessors
     public ConnectionState CurrentState
     {
@@ -36,7 +42,7 @@ public class MockUserTripManager : IUserTripManager
     public event EventHandler<InquireResultEventArgs>? InquireResultReceived;
     public async Task Connect(CancellationToken cancellationToken)
     {
-        await Task.Delay(TimeSpan.FromMilliseconds(500), cancellationToken);
+        await Task.Delay(TimeSpan.FromMilliseconds(ConnectionDelayMs), cancellationToken);
         SetConnectionState(ConnectionState.Connected);
     }
     public async Task SendInquireTripAsync(Trip trip, CancellationToken cancellationToken = default)
@@ -51,7 +57,7 @@ public class MockUserTripManager : IUserTripManager
         CurrentTrip.EstimatedDistance = 4200;
         CurrentTrip.EstimatedTripDuration = 620;
         CurrentTrip.EstimatedCost = 12.5;
-        await Task.Delay(TimeSpan.FromMilliseconds(500), cancellationToken);
+        await Task.Delay(TimeSpan.FromMilliseconds(InquiryDelayMs), cancellationToken);
         InquireResultReceived?.Invoke(this, new InquireResultEventArgs { Trip = trip });
     }
     
@@ -62,7 +68,14 @@ public class MockUserTripManager : IUserTripManager
             ErrorReceived?.Invoke(this, new ErrorReceivedEventArgs { ErrorText = "Not connected" });
             return;
         }
-        await TripFeedbackSimulationLoop(cancellationToken);
+        try
+        {
+            await TripFeedbackSimulationLoop(cancellationToken);
+        }
+        catch (TaskCanceledException)
+        {
+            // Cancellation is expected behavior, not an error
+        }
     }
     public Task SendCancelTripAsync(CancellationToken cancellationToken = default)
     {
@@ -83,7 +96,7 @@ public class MockUserTripManager : IUserTripManager
         if(CurrentTrip == null || CurrentState != ConnectionState.Connected)
             return;
 
-        await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+        await Task.Delay(TimeSpan.FromMilliseconds(StateTransitionDelayMs), cancellationToken);
         if (cancellationToken.IsCancellationRequested)
             return;
         CurrentTrip.Status = TripState.Requested;
@@ -91,13 +104,13 @@ public class MockUserTripManager : IUserTripManager
         if (cancellationToken.IsCancellationRequested)
             return;
         
-        await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+        await Task.Delay(TimeSpan.FromMilliseconds(StateTransitionDelayMs), cancellationToken);
         if (cancellationToken.IsCancellationRequested)
             return;
         CurrentTrip.Status = TripState.Acknowledged;
         StatusChanged?.Invoke(this, new StatusUpdateEventArgs { Trip =  CurrentTrip });
         
-        await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+        await Task.Delay(TimeSpan.FromMilliseconds(StateTransitionDelayMs), cancellationToken);
         CurrentTrip.Status = TripState.Accepted;
         CurrentTrip.Driver = new Driver
         {
@@ -107,14 +120,14 @@ public class MockUserTripManager : IUserTripManager
         };
         StatusChanged?.Invoke(this, new StatusUpdateEventArgs { Trip =  CurrentTrip });
 
-        await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
+        await Task.Delay(TimeSpan.FromMilliseconds(LongStateTransitionDelayMs), cancellationToken);
         if (cancellationToken.IsCancellationRequested)
             return;
         CurrentTrip.Status = TripState.DriverArrived;
         CurrentTrip.NextStop++;
         StatusChanged?.Invoke(this, new StatusUpdateEventArgs { Trip =  CurrentTrip });
 
-        await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
+        await Task.Delay(TimeSpan.FromMilliseconds(LongStateTransitionDelayMs), cancellationToken);
         if (cancellationToken.IsCancellationRequested)
             return;
         CurrentTrip.Status = TripState.Ongoing;
@@ -122,27 +135,27 @@ public class MockUserTripManager : IUserTripManager
 
         for (int i = 1; i < CurrentTrip.Stops.Count - 1; i++)
         {
-            await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
+            await Task.Delay(TimeSpan.FromMilliseconds(LongStateTransitionDelayMs), cancellationToken);
             if (cancellationToken.IsCancellationRequested)
                 return;
             CurrentTrip.Status = TripState.AtStop;
             CurrentTrip.NextStop++;
             StatusChanged?.Invoke(this, new StatusUpdateEventArgs { Trip =  CurrentTrip });
         
-            await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
+            await Task.Delay(TimeSpan.FromMilliseconds(LongStateTransitionDelayMs), cancellationToken);
             if (cancellationToken.IsCancellationRequested)
                 return;
             CurrentTrip.Status = TripState.Ongoing;
             StatusChanged?.Invoke(this, new StatusUpdateEventArgs { Trip =  CurrentTrip });
         }
-        await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
+        await Task.Delay(TimeSpan.FromMilliseconds(LongStateTransitionDelayMs), cancellationToken);
         if (cancellationToken.IsCancellationRequested)
             return;
         CurrentTrip.Status = TripState.Arrived;
         CurrentTrip.ActualCost = 33.3;
         StatusChanged?.Invoke(this, new StatusUpdateEventArgs { Trip =  CurrentTrip });
         
-        await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
+        await Task.Delay(TimeSpan.FromMilliseconds(LongStateTransitionDelayMs), cancellationToken);
         if (cancellationToken.IsCancellationRequested)
             return;
         CurrentTrip.Status = TripState.Ended;
