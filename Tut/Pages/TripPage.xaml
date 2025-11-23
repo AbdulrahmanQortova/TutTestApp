@@ -3,6 +3,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:mapsui="clr-namespace:Mapsui.UI.Maui;assembly=Mapsui.UI.Maui"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              xmlns:views="clr-namespace:Tut.Views"
              xmlns:pageModels="clr-namespace:Tut.PageModels"
              x:Class="Tut.Pages.TripPage"
@@ -12,21 +13,39 @@
              Shell.NavBarHasShadow="False"
              Shell.NavBarIsVisible="False">
 
-    <Grid RowDefinitions="*,auto">
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <toolkit:InvertedBoolConverter x:Key="InvertedBoolConverter" />
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="auto,*,auto">
+        <!--Connection status indicator-->
+        <Border Grid.Row="0" 
+                BackgroundColor="{DynamicResource Warning}"
+                Padding="10,5"
+                IsVisible="{Binding IsConnected, Converter={StaticResource InvertedBoolConverter}}"
+                ZIndex="100">
+            <Label Text="{Binding ConnectionStatusMessage}" 
+                   TextColor="White"
+                   FontSize="12"
+                   HorizontalOptions="Center"/>
+        </Border>
+        
         <!--begin: Map row-->
         <Image x:Name="AnimationImage" Source="locationanimation.png"
-               Grid.Row="0"
+               Grid.Row="1"
                HorizontalOptions="Center" VerticalOptions="Center"
                ZIndex="2" Margin="0"
                WidthRequest="200" HeightRequest="200"
                InputTransparent="True"
                IsVisible="{Binding IsAnimationVisible}" />
 
-        <mapsui:MapView x:Name="MapView"
-                        Grid.Row="0"
+        <mapsui:MapControl x:Name="MapControl"
+                        Grid.Row="1"
                         ZIndex="1"
                         HorizontalOptions="FillAndExpand" VerticalOptions="FillAndExpand" />
         <!--end: Map row-->
-        <views:RideDetailsPopup x:Name="MyRideDetails" Grid.Row="1" />
+        <views:RideDetailsPopup x:Name="MyRideDetails" Grid.Row="2" />
     </Grid>
 </ContentPage>
