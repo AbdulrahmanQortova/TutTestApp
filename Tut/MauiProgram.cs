@@ -1,13 +1,16 @@
 ﻿using CommunityToolkit.Maui;
+using Grpc.Net.Client.Balancer;
 using Microsoft.Extensions.Logging;
 using Plugin.LocalNotification;
 using Plugin.LocalNotification.AndroidOption;
+using SkiaSharp.Views.Maui.Controls.Hosting;
 using Tut.Common.Business;
 using Tut.Common.GServices;
 using Tut.Common.Managers;
 using Tut.Common.Mocks;
 using Tut.PageModels;
 using Tut.PageModels.Popups;
+using Tut.Pages;
 using Tut.Popups;
 using TutMauiCommon.Services;
 
@@ -17,6 +20,7 @@ public static class MauiProgram
 {
     public static MauiApp CreateMauiApp()
     {
+
         var builder = MauiApp.CreateBuilder();
         builder
             .UseMauiApp<App>()
@@ -34,11 +38,20 @@ public static class MauiProgram
                     });
                 });
             })
+
             .ConfigureFonts(fonts =>
             {
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
             });
+
+
+
+        // android.runtime.JavaProxyThrowable
+        // This registers all required handlers for SKGLView and resolves the crash.
+        builder.UseSkiaSharp();
+
+
 
 #if DEBUG
         builder.Logging.AddDebug();
@@ -55,8 +68,9 @@ public static class MauiProgram
 
 
         builder.Services.AddTransientPopup<ArrivedPopup, ArrivedPopupModel>();
-        
-        
+
+
+        #region DI Containers (ViewModles)
         builder.Services.AddTransient<HomePageModel>();
         builder.Services.AddTransient<TripPageModel>();
         builder.Services.AddTransient<RideDetailsViewModel>();
@@ -66,8 +80,11 @@ public static class MauiProgram
         builder.Services.AddTransient<RatingPageModel>();
         builder.Services.AddTransient<SetLocationPageModel>();
         builder.Services.AddTransient<WhereToGoPageModel>();
-        
-        
+        #endregion
+
+
+
+
         return builder.Build();
     }
 }

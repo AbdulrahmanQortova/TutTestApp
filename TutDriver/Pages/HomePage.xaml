@@ -48,7 +48,7 @@
                    FontAttributes="Bold" />
         </Grid>
             <StackLayout Orientation="Horizontal" VerticalOptions="Center">
-            <StackLayout Orientation="Vertical" Spacing="2" HorizontalOptions="EndAndExpand" Margin="0,0,15,0">
+            <StackLayout Orientation="Vertical"  Spacing="2" HorizontalOptions="EndAndExpand" Margin="0,0,15,0">
             </StackLayout>
         </StackLayout>
 

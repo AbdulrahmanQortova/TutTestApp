@@ -2,6 +2,7 @@ using CommunityToolkit.Maui.Core.Extensions;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Collections.ObjectModel;
+using System.Text.Json;
 using Tut.Common.Business;
 using Tut.Common.Dto.MapDtos;
 using Tut.Common.Models;
@@ -90,6 +91,8 @@ public partial class SetLocationPageModel(
         {
             [StringConstants.Context] = _locationContext ?? string.Empty,
             [StringConstants.Place] = SelectedPlace
+
+
         });
     }
 
